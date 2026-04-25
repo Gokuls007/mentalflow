@@ -254,6 +254,13 @@ const Dashboard: React.FC = () => {
             </h1>
             <p className="text-slate-500 mt-2 text-sm">Refining your cognitive resilience today.</p>
           </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">Current Level</p>
+              <p className="font-bold text-indigo-400 text-sm">{stats?.current_level || 'Pioneer'} ({stats?.total_xp || totalXP} XP)</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-500/30">
+              {user?.firstName?.[0] || 'A'}
             </div>
           </div>
         </header>
