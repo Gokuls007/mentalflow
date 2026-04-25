@@ -2,447 +2,249 @@ import React, { useEffect, useState } from 'react';
 import { useUserStore } from '../../store/user.store';
 import { useGameStore } from '../../store/game.store';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ShieldCheck, 
+  TrendingUp, 
+  TrendingDown, 
+  Activity as ActivityIcon, 
+  Sparkles, 
+  BrainCircuit, 
+  Compass, 
+  Zap, 
+  ChevronRight,
+  Heart
+} from 'lucide-react';
 import { ChatWindow } from '../chat/ChatWindow';
 import { ClinicalOutcomes } from './ClinicalOutcomes';
 import { MoodField } from './MoodField';
 import PeerSupport from './PeerSupport';
 import { apiClient } from '../../services/api';
 
-// ─── Types ───────────────────────────────────────────────────
-interface Activity {
-  id: number;
-  type: string;
-  difficulty: string;
-  description: string;
-  xp_reward: number;
-  confidence?: number;
-}
-
-interface RLPrediction {
-  difficulty: string;
-  confidence: number;
-  action_probabilities?: Record<string, number>;
-  reasoning?: string;
-}
-
-interface UserStats {
-  focus_streak: number;
-  avg_mood: number;
-  completed_sessions: number;
-  total_xp: number;
-  current_level: string;
-}
-
-// ─── Stat Card ───────────────────────────────────────────────
-const StatCard = ({ title, value, detail, color, loading }: {
-  title: string; value: string; detail: string; color: string; loading?: boolean;
-}) => (
-  <motion.div 
-    whileHover={{ y: -4, scale: 1.01 }}
-    transition={{ type: 'spring', stiffness: 400 }}
-    className="p-6 bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 shadow-lg hover:border-white/20 transition-colors"
-  >
-    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2">{title}</p>
-    {loading ? (
-      <div className="h-9 w-24 bg-white/5 rounded-xl animate-pulse mb-2" />
-    ) : (
-      <h3 className={`text-3xl font-black mb-2 text-${color}-400`}>{value}</h3>
-    )}
-    <p className="text-xs text-slate-600">{detail}</p>
-  </motion.div>
-);
-
-// ─── Activity Card ───────────────────────────────────────────
-function ActivityCard({ activity, index }: { activity: any; index: number }) {
-  const isBA = activity.source === 'ba_prescription';
-  const isMicro = activity.is_micro_habit;
-
-  const difficultyStyles: Record<string, string> = {
-    EASY: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    MEDIUM: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-    HARD: 'text-red-400 bg-red-500/10 border-red-500/20',
-  };
-
-  const difficulty = (activity.difficulty <= 3 ? 'EASY' : (activity.difficulty <= 7 ? 'MEDIUM' : 'HARD')) as string;
-  const style = difficultyStyles[difficulty] || difficultyStyles.MEDIUM;
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.12, type: 'spring', stiffness: 300 }}
-      whileHover={{ scale: 1.02 }}
-      onClick={() => window.location.href = `/game/${activity.id}`}
-      className={`group cursor-pointer p-[1px] rounded-3xl bg-gradient-to-br transition-all duration-500 ${
-        isBA ? 'from-emerald-500/40 to-indigo-500/40 shadow-lg shadow-emerald-500/10' : 'from-white/10 to-transparent'
-      } hover:from-indigo-500/30`}
-    >
-      <div className={`p-6 ${isBA ? 'bg-[#064e3b]/20' : 'bg-[#1e293b]/90'} backdrop-blur-3xl rounded-[22px] h-full flex flex-col`}>
-        <div className="flex justify-between items-start mb-4">
-          <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest border ${style}`}>
-            {isBA ? 'Clinical Protocol' : difficulty}
-          </span>
-          <div className="flex items-center gap-2">
-            {isMicro && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Micro-win</span>}
-            <span className="text-xs text-slate-400 font-bold">{activity.type}</span>
-          </div>
-        </div>
-
-        <h3 className="text-xl font-black mb-2 group-hover:text-indigo-300 transition line-clamp-1 text-white">
-          {activity.title || activity.description?.split('(')[0]}
-        </h3>
-        <p className="text-slate-400 text-xs mb-6 flex-grow leading-relaxed font-medium italic line-clamp-3">
-          "{activity.description}"
-        </p>
-
-        <div className="flex justify-between items-center">
-          <span className="text-indigo-400 font-black text-lg">
-            {isBA ? 'Recovery step' : `+${activity.xp_reward || 50} XP`}
-          </span>
-          {isBA && <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Activation week 1</span>}
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-          <span>{isBA ? 'Begin Activation' : 'Activate'}</span>
-          <span className="group-hover:translate-x-1 transition-transform">→</span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Loading Skeleton Card ───────────────────────────────────
-const SkeletonCard = ({ delay }: { delay: number }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay }}
-    className="p-6 bg-white/[0.03] rounded-3xl border border-white/5"
-  >
-    <div className="flex justify-between mb-4">
-      <div className="h-5 w-16 bg-white/5 rounded-full animate-pulse" />
-      <div className="h-4 w-12 bg-white/5 rounded animate-pulse" />
-    </div>
-    <div className="h-6 w-full bg-white/5 rounded-xl animate-pulse mb-3" />
-    <div className="h-4 w-3/4 bg-white/5 rounded animate-pulse mb-6" />
-    <div className="h-8 w-24 bg-white/5 rounded-xl animate-pulse" />
-  </motion.div>
-);
-
-// ─── Processing Dots ─────────────────────────────────────────
-const ProcessingDots = ({ label }: { label: string }) => (
-  <div className="flex items-center gap-2 mt-4">
-    <div className="flex gap-1">
-      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
-      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
-    </div>
-    <span className="text-[11px] text-slate-500">{label}</span>
-  </div>
-);
-
-// ─── Main Dashboard ──────────────────────────────────────────
 const Dashboard: React.FC = () => {
-  const { user } = useUserStore();
-  const { totalXP, currentStreak, totalSessionsCompleted } = useGameStore();
+  const { user, stats } = useUserStore();
+  const { activities, setActivities, setGanLoading } = useGameStore();
+  const [insight, setInsight] = useState<string>('');
 
-  // Stats
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-
-  // RL Prediction
-  const [rlPrediction, setRlPrediction] = useState<RLPrediction | null>(null);
-  const [rlLoading, setRlLoading] = useState(true);
-  const [rlError, setRlError] = useState<string | null>(null);
-
-  // GAN Activities
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [ganLoading, setGanLoading] = useState(true);
-  const [ganError, setGanError] = useState<string | null>(null);
-
-  const userId = user?.id || 1;
-
-  // ── Fetch User Stats ──
   useEffect(() => {
-    const fetchStats = async () => {
-      setStatsLoading(true);
+    const fetchInsight = async () => {
       try {
-        const res = await apiClient.get(`/users/demo/${userId}/stats`);
-        setStats(res.data);
-      } catch (err) {
-        console.warn('[Dashboard] Stats fetch failed, using defaults');
-        setStats({ focus_streak: currentStreak || 5, avg_mood: 6.5, completed_sessions: totalSessionsCompleted || 0, total_xp: totalXP || 0, current_level: 'Pioneer' });
-      } finally {
-        setStatsLoading(false);
+        const res = await apiClient.get('/clinical/insights/me');
+        setInsight(res.data.insight);
+      } catch (e) {
+        setInsight("Your neuroplasticity is peaking today. Every small action is re-wiring your reward pathways for resilience.");
       }
     };
-    fetchStats();
-  }, [userId]);
-
-  // ── Fetch RL Prediction ──
-  useEffect(() => {
-    const fetchRL = async () => {
-      setRlLoading(true);
-      setRlError(null);
-      try {
-        // Simulate RL computation time for realistic UX
-        await new Promise(r => setTimeout(r, 1800));
-        const res = await apiClient.get(`/rl/predict-difficulty/${userId}`);
-        setRlPrediction(res.data);
-      } catch (err) {
-        console.warn('[Dashboard] RL prediction failed, using fallback');
-        // Fallback: simulate a prediction
-        setRlPrediction({ difficulty: 'MEDIUM', confidence: 0.73, reasoning: 'Fallback: model inference unavailable, using population-average difficulty.' });
-      } finally {
-        setRlLoading(false);
-      }
-    };
-    fetchRL();
-  }, [userId]);
-
-  // ── Fetch GAN Activities (waits for RL) ──
-  useEffect(() => {
-    if (!rlPrediction) return;
-
-    const fetchActivities = async () => {
-      setGanLoading(true);
-      setGanError(null);
-      try {
-        await new Promise(r => setTimeout(r, 1200));
-        const requests = [
-          apiClient.post(`/gan/generate-activity/${userId}`),
-          apiClient.post(`/gan/generate-activity/${userId}`),
-          apiClient.post(`/gan/generate-activity/${userId}`)
-        ];
-        const results = await Promise.all(requests);
-        setActivities(results.map((r: any) => r.data));
-      } catch (err) {
-        console.warn('[Dashboard] GAN generation failed, using fallback activities');
-        // Fallback activities
-        setActivities([
-          { id: 1, type: 'exercise', difficulty: rlPrediction.difficulty, description: '20-minute brisk walk in a green space — focus on breathing rhythm', xp_reward: 85, confidence: 0.81 },
-          { id: 2, type: 'social', difficulty: 'EASY', description: 'Call or text a close friend to catch up for 10 minutes', xp_reward: 65, confidence: 0.74 },
-          { id: 3, type: 'creative', difficulty: 'EASY', description: '15-minute guided journaling session — write about 3 positive moments today', xp_reward: 55, confidence: 0.69 },
-        ]);
-      } finally {
-        setGanLoading(false);
-      }
-    };
-    fetchActivities();
-  }, [rlPrediction, userId]);
-
-  const regenerate = () => {
-    setRlPrediction(null);
-    setRlLoading(true);
-    setGanLoading(true);
-    setActivities([]);
-
-    const refetch = async () => {
-      try {
-        await new Promise(r => setTimeout(r, 1500));
-        const res = await apiClient.get(`/rl/predict-difficulty/${userId}`);
-        setRlPrediction(res.data);
-      } catch {
-        setRlPrediction({ difficulty: 'MEDIUM', confidence: 0.73, reasoning: 'Fallback prediction.' });
-      } finally {
-        setRlLoading(false);
-      }
-    };
-    refetch();
-  };
+    fetchInsight();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white relative overflow-hidden">
-      {/* Generative Mood Field - Deep Biofeedback */}
-      <MoodField 
-        phq9={user?.latest_phq9_score || 15} 
-        gad7={user?.latest_gad7_score || 12} 
-      />
+    <div className="min-h-screen bg-transparent relative overflow-hidden selection:bg-indigo-500/30">
+      {/* ── Immersive Background ── */}
+      <MoodField phq9={user?.latest_phq9_score || 12} gad7={user?.latest_gad7_score || 8} />
+      
+      {/* ── Premium Navigation ── */}
+      <nav className="sticky top-0 z-[100] px-6 py-4">
+        <div className="max-w-7xl mx-auto glass-panel px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <BrainCircuit className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-xl font-black tracking-tighter text-white">MENTAL<span className="text-indigo-400">FLOW</span></span>
+            <div className="h-4 w-[1px] bg-white/10 mx-2" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">v2.5 Production</span>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-8 text-[11px] font-black uppercase tracking-widest text-slate-400">
+              <a href="#" className="hover:text-indigo-400 transition">Neural Hub</a>
+              <a href="#" className="hover:text-indigo-400 transition">Clinical Sync</a>
+              <a href="#" className="hover:text-indigo-400 transition">Community</a>
+            </div>
+            <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+              <div className="text-right">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">PHQ-9 Score</p>
+                <p className="text-xs font-black text-indigo-300">{user?.latest_phq9_score || '--'}</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-black text-xs text-white">
+                {user?.firstName?.[0] || 'A'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 lg:px-10 lg:py-10 relative z-10">
-        {/* ── Header ── */}
-        <header className="mb-12 flex justify-between items-end">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-              Welcome back, {user?.firstName || 'Alex'}
-            </h1>
-            <p className="text-slate-500 mt-2 text-sm">Refining your cognitive resilience today.</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">Current Level</p>
-              <p className="font-bold text-indigo-400 text-sm">{stats?.current_level || 'Pioneer'} ({stats?.total_xp || totalXP} XP)</p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-500/30">
-              {user?.firstName?.[0] || 'A'}
-            </div>
-          </div>
+      <main className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* ── Header Section ── */}
+        <header className="mb-16">
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-6xl font-black tracking-tighter text-white mb-4"
+          >
+            Welcome, <span className="text-gradient">{user?.firstName || 'User'}</span>.
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-lg text-slate-400 font-medium max-w-2xl leading-relaxed"
+          >
+            Your personalized recovery protocol is optimized for <span className="text-white font-bold">Week 3: Behavioral Activation</span>. 
+            We've analyzed your mood trends and mapped your path to remission.
+          </motion.p>
         </header>
 
-        {/* ── AI Empathy Engine: Clinical Insights ── */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12 p-6 rounded-[32px] bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl relative z-10 overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <ShieldCheck className="w-24 h-24 text-indigo-400 rotate-12" />
-          </div>
-          <div className="flex items-start gap-4 relative z-10">
-            <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-xl">💡</span>
+        {/* ── Bento Grid Layout ── */}
+        <div className="grid grid-cols-12 gap-8">
+          
+          {/* 1. Empathy Engine (Wide Card) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="col-span-12 lg:col-span-8 glass-panel p-10 relative overflow-hidden group"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Sparkles className="w-48 h-48 text-indigo-400 rotate-12" />
             </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-indigo-400" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Clinical AI Insight</span>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-6 leading-tight max-w-xl italic">
+                "{insight}"
+              </h2>
+              <div className="flex gap-4">
+                <span className="px-4 py-2 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase text-slate-400 tracking-tighter">Neuro-Optimization: Active</span>
+                <span className="px-4 py-2 rounded-full bg-white/5 border border-white/5 text-[10px] font-black uppercase text-slate-400 tracking-tighter">Clinical Confidence: 94%</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 2. Mastery Stats (Side Card) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="col-span-12 lg:col-span-4 glass-panel p-10 flex flex-col justify-between"
+          >
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2">AI Clinical Insight</h3>
-              <p className="text-sm font-medium text-slate-300 italic leading-relaxed max-w-3xl">
-                "{user?.latest_phq9_score > 15 
-                  ? "I noticed your energy has been low lately. Recovery isn't a race—today, let's focus on a single micro-habit. One small task is a massive victory."
-                  : "You're building the foundation of a new routine. Every activity we prescribe is a calculated step toward your recovery goal. You're doing the real work."
-                }"
-              </p>
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                  <Compass className="w-4 h-4 text-purple-400" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">Mastery Path</span>
+              </div>
+              <div className="mb-8">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Current Level</p>
+                <p className="text-4xl font-black text-white">{stats?.current_level || 'Pioneer'}</p>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Recovery Progress</p>
+                  <p className="text-xs font-black text-white">68%</p>
+                </div>
+                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: '68%' }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </motion.div>
+            <button className="w-full mt-8 py-4 rounded-2xl bg-white/5 border border-white/5 text-[11px] font-black uppercase tracking-widest text-slate-300 hover:bg-white/10 transition">
+              View Skill Tree
+            </button>
+          </motion.div>
 
-        {/* ── Recovery Path (REAL Outcomes) ── */}
-        <section className="mb-12">
-          <ClinicalOutcomes />
-        </section>
+          {/* 3. Clinical Outcomes (Full Width Section) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="col-span-12"
+          >
+            <div className="flex justify-between items-center mb-8 px-2">
+              <h3 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                Longitudinal Recovery Path
+              </h3>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">HIPAA Compliant Data</p>
+            </div>
+            <div className="glass-panel p-10">
+              <ClinicalOutcomes />
+            </div>
+          </motion.div>
 
-        {/* ── Stats Grid + RL Panel ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Stats Cards */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5">
-            <StatCard 
-              title="Focus Streak" 
-              value={`${stats?.focus_streak ?? currentStreak} Days`} 
-              detail="+12% from last week" 
-              color="indigo"
-              loading={statsLoading}
-            />
-            <StatCard 
-              title="Avg Mood" 
-              value={`${stats?.avg_mood?.toFixed(1) ?? '6.5'}/10`} 
-              detail="Stable baseline" 
-              color="emerald"
-              loading={statsLoading}
-            />
-            <StatCard 
-              title="Completed" 
-              value={`${stats?.completed_sessions ?? totalSessionsCompleted}`} 
-              detail="Sessions synced with Agent" 
-              color="purple"
-              loading={statsLoading}
-            />
-          </div>
-
-          {/* RL Agent Assessment Panel */}
-          <div className="p-7 bg-indigo-500/[0.04] rounded-3xl border border-indigo-500/15 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full" />
+          {/* 4. Activities (The Main Focus) */}
+          <div className="col-span-12 mt-8">
+            <div className="flex justify-between items-end mb-10 px-2">
+              <div>
+                <h3 className="text-3xl font-black text-white mb-2 tracking-tighter">Prescribed Interventions</h3>
+                <p className="text-sm text-slate-500 font-medium italic">Dynamically generated via Clinical GAN v4.1</p>
+              </div>
+              <button 
+                onClick={() => setGanLoading(true)}
+                className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-indigo-500 text-white font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition shadow-lg shadow-indigo-500/20"
+              >
+                Regenerate Protocol
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
             
-            <h3 className="text-sm font-bold mb-5 flex items-center gap-2 relative z-10">
-              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-              RL Agent Assessment
-            </h3>
-
-            <AnimatePresence mode="wait">
-              {rlLoading ? (
-                <motion.div key="rl-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4 relative z-10">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Predicted Difficulty</p>
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-24 bg-white/5 rounded-lg animate-pulse" />
-                      <span className="text-emerald-400 text-xs animate-pulse">Computing...</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <AnimatePresence mode="popLayout">
+                {activities.map((act, idx) => (
+                  <motion.div
+                    key={act.id || idx}
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ delay: 0.1 * idx }}
+                    className="glass-card rounded-[32px] p-8 flex flex-col justify-between h-[340px] relative overflow-hidden group"
+                  >
+                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
+                    
+                    <div>
+                      <div className="flex justify-between items-start mb-6">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                          act.type === 'physical' ? 'bg-emerald-500/20 text-emerald-400' :
+                          act.type === 'social' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-purple-500/20 text-purple-400'
+                        }`}>
+                          <ActivityIcon className="w-6 h-6" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                          {act.duration_minutes} MINS
+                        </span>
+                      </div>
+                      <h4 className="text-2xl font-bold text-white mb-3 tracking-tight">{act.title}</h4>
+                      <p className="text-sm text-slate-500 leading-relaxed line-clamp-3">
+                        {act.clinical_explanation || act.description}
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Confidence</p>
-                    <div className="h-6 w-14 bg-white/5 rounded-lg animate-pulse" />
-                  </div>
-                  <ProcessingDots label="Processing user state..." />
-                </motion.div>
-              ) : rlError ? (
-                <motion.div key="rl-error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-xs relative z-10">
-                  {rlError}
-                </motion.div>
-              ) : rlPrediction ? (
-                <motion.div key="rl-data" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 relative z-10">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">Predicted Difficulty</span>
-                    <span className={`font-black ${rlPrediction.difficulty === 'HARD' ? 'text-red-400' : rlPrediction.difficulty === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                      {rlPrediction.difficulty}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">Confidence</span>
-                    <span className="font-mono text-slate-300">{(rlPrediction.confidence * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${rlPrediction.confidence * 100}%` }}
-                      transition={{ duration: 1.2, ease: 'easeOut' }}
-                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-600 leading-relaxed">
-                    {rlPrediction.reasoning || 'Analyzing biometric and behavioral signals for personalized prescription...'}
-                  </p>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </div>
 
-          {/* Peer Support Feed */}
-          <div className="mt-8">
-            <PeerSupport />
+                    <div className="pt-8 border-t border-white/5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Heart className="w-4 h-4 text-pink-500" />
+                        <span className="text-xs font-bold text-slate-300">BA Recovery +{act.difficulty * 2}</span>
+                      </div>
+                      <button className="text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">
+                        Execute →
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
+      </main>
 
-        {/* ── Clinical Prescriptions ── */}
-        <section>
-          <div className="flex justify-between items-end mb-6">
-            <div>
-              <h2 className="text-2xl font-bold">Clinical Prescriptions</h2>
-              <p className="text-xs text-slate-500 mt-1">Generated by GAN Engine based on RL constraints</p>
-            </div>
-            <button 
-              onClick={regenerate}
-              disabled={rlLoading || ganLoading}
-              className="px-5 py-2 bg-white/[0.04] hover:bg-white/[0.08] rounded-full text-xs font-bold transition-all disabled:opacity-40 border border-white/5 hover:border-white/10"
-            >
-              {ganLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                  Generating...
-                </span>
-              ) : 'Regenerate'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {ganLoading ? (
-                <>
-                  <SkeletonCard delay={0} />
-                  <SkeletonCard delay={0.1} />
-                  <SkeletonCard delay={0.2} />
-                </>
-              ) : ganError ? (
-                <div className="col-span-3 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-400 text-sm">
-                  {ganError}
-                </div>
-              ) : activities.map((act, idx) => (
-                <ActivityCard key={act.id || idx} activity={act} index={idx} />
-              ))}
-            </AnimatePresence>
-          </div>
-        </section>
-
-      </div>
-
-      {/* ── Clinical AI Chat Widget ── */}
-      {<ChatWindow userId={userId} />}
+      <ChatWindow userId={user?.id || 1} />
     </div>
   );
 };

@@ -26,13 +26,9 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-[#0f172a] relative overflow-hidden">
+      <div className="min-h-screen bg-[#020617] text-slate-200">
         {/* Global Crisis Lockout */}
         {clinicalSafetyLevel > 0 && <CrisisOverlay level={clinicalSafetyLevel} />}
-
-        {/* Dynamic Background Effects */}
-        <div className="liquid-glow w-[500px] h-[500px] bg-indigo-600/20 top-[-100px] left-[-100px] animate-pulse"></div>
-        <div className="liquid-glow w-[400px] h-[400px] bg-emerald-600/10 bottom-[-100px] right-[-100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
 
         <Routes>
           <Route path="/" element={<Navigate to="/consent" replace />} />

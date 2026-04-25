@@ -81,17 +81,19 @@ export const MoodField: React.FC<MoodFieldProps> = ({ phq9, gad7, hrv = 50 }) =>
     };
 
     const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Create trailing effect for liquid feel
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Draw Connections (Mental Flow)
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 + calmLevel * 0.1})`;
-      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = `rgba(129, 140, 248, ${0.03 + calmLevel * 0.05})`;
+      ctx.lineWidth = 1;
       for (let i = 0; i < particles.length; i++) {
-        for (let j = i; j < particles.length; j++) {
+        for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 100) {
+          if (distance < 150) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);

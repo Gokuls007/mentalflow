@@ -3,35 +3,91 @@
 @source "../index.html";
 @source "./";
 
-/* Global styles for MentalFlow */
-@layer base {
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: #0f172a;
-    color: #e2e8f0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
+:root {
+  --bg-deep: 224 71% 4%;
+  --card-bg: 224 71% 7%;
+  --accent-primary: 263 90% 65%;
+  --accent-secondary: 191 91% 50%;
+  --accent-tertiary: 326 100% 60%;
+  --text-main: 224 20% 94%;
+  --text-muted: 224 10% 60%;
+  --glass-border: 255 255 255 / 0.08;
+  --glass-shine: 255 255 255 / 0.03;
 }
 
-@layer components {
-  .liquid-glow {
-    position: fixed;
-    border-radius: 9999px;
-    filter: blur(120px);
-    pointer-events: none;
-    z-index: 0;
-  }
+body {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  background-color: hsl(var(--bg-deep));
+  color: hsl(var(--text-main));
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-@layer utilities {
-  .shadow-3xl {
-    box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.5);
-  }
+/* ── Premium Glassmorphism ── */
+.glass-panel {
+  background: linear-gradient(
+    135deg, 
+    rgba(255, 255, 255, 0.03) 0%, 
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(var(--glass-border));
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  border-radius: 32px;
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Typography Utilities ── */
+.text-gradient {
+  background: linear-gradient(to right, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Premium Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Animations ── */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
