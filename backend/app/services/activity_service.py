@@ -2,7 +2,9 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from app.models.clinical import Activity, GameSession
+from app.models.user import User
 from app.schemas.activity import ActivityCreate, ActivityUpdate
+from app.services.behavioral_activation import BehavioralActivationService
 
 # Optional RL import - not required for basic activity CRUD
 try:
@@ -27,10 +29,15 @@ class ActivityService:
         limit: int = 50,
         offset: int = 0
     ) -> List[Activity]:
+        # Check and prescribe BA tasks first
+        user = db.query(User).filter_by(id=user_id).first()
+        if user:
+            BehavioralActivationService.prescribe_ba_activities(user, db)
+            
         query = db.query(Activity).filter(Activity.user_id == user_id)
         if activity_type:
             query = query.filter(Activity.type == activity_type)
-        return query.offset(offset).limit(limit).all()
+        return query.order_by(Activity.date_scheduled.desc()).offset(offset).limit(limit).all()
         
     def create_activity(self, db: Session, user_id: int, activity_in: ActivityCreate) -> Activity:
         db_activity = Activity(

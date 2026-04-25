@@ -59,12 +59,12 @@ export const ClinicalOutcomes: React.FC = () => {
     <div className="space-y-8 p-1">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-black tracking-tight text-white mb-2">Recovery Path</h2>
-          <p className="text-slate-400 font-medium">{progress.milestone}</p>
+          <h2 className="text-3xl font-black tracking-tight text-white mb-2">Recovery Journey</h2>
+          <p className="text-emerald-400/80 font-bold text-xs uppercase tracking-[0.2em]">{progress.milestone}</p>
         </div>
         <div className="text-right">
-          <span className="text-4xl font-black text-emerald-400">{progress.overall_progress}%</span>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Remission</p>
+          <span className="text-4xl font-black text-indigo-400">Week 1</span>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">BA Protocol</p>
         </div>
       </div>
 

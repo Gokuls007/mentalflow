@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/game.store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow } from '../chat/ChatWindow';
 import { ClinicalOutcomes } from './ClinicalOutcomes';
+import PeerSupport from './PeerSupport';
 import { apiClient } from '../../services/api';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -51,14 +52,18 @@ const StatCard = ({ title, value, detail, color, loading }: {
 );
 
 // ─── Activity Card ───────────────────────────────────────────
-function ActivityCard({ activity, index }: { activity: Activity; index: number }) {
+function ActivityCard({ activity, index }: { activity: any; index: number }) {
+  const isBA = activity.source === 'ba_prescription';
+  const isMicro = activity.is_micro_habit;
+
   const difficultyStyles: Record<string, string> = {
     EASY: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     MEDIUM: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
     HARD: 'text-red-400 bg-red-500/10 border-red-500/20',
   };
 
-  const style = difficultyStyles[activity.difficulty] || difficultyStyles.MEDIUM;
+  const difficulty = (activity.difficulty <= 3 ? 'EASY' : (activity.difficulty <= 7 ? 'MEDIUM' : 'HARD')) as string;
+  const style = difficultyStyles[difficulty] || difficultyStyles.MEDIUM;
 
   return (
     <motion.div 
@@ -67,34 +72,37 @@ function ActivityCard({ activity, index }: { activity: Activity; index: number }
       transition={{ delay: index * 0.12, type: 'spring', stiffness: 300 }}
       whileHover={{ scale: 1.02 }}
       onClick={() => window.location.href = `/game/${activity.id}`}
-      className="group cursor-pointer p-[1px] rounded-3xl bg-gradient-to-br from-white/10 to-transparent hover:from-indigo-500/30 transition-all duration-500"
+      className={`group cursor-pointer p-[1px] rounded-3xl bg-gradient-to-br transition-all duration-500 ${
+        isBA ? 'from-emerald-500/40 to-indigo-500/40 shadow-lg shadow-emerald-500/10' : 'from-white/10 to-transparent'
+      } hover:from-indigo-500/30`}
     >
-      <div className="p-6 bg-[#1e293b]/90 backdrop-blur-3xl rounded-[22px] h-full flex flex-col">
+      <div className={`p-6 ${isBA ? 'bg-[#064e3b]/20' : 'bg-[#1e293b]/90'} backdrop-blur-3xl rounded-[22px] h-full flex flex-col`}>
         <div className="flex justify-between items-start mb-4">
-          <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest border ${style}`}>
-            {activity.difficulty}
+          <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest border ${style}`}>
+            {isBA ? 'Clinical Protocol' : difficulty}
           </span>
-          <span className="text-xs text-slate-400">{activity.type}</span>
+          <div className="flex items-center gap-2">
+            {isMicro && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Micro-win</span>}
+            <span className="text-xs text-slate-400 font-bold">{activity.type}</span>
+          </div>
         </div>
 
-        <h3 className="text-lg font-bold mb-2 group-hover:text-indigo-300 transition line-clamp-1">
-          {activity.description?.split('(')[0]}
+        <h3 className="text-xl font-black mb-2 group-hover:text-indigo-300 transition line-clamp-1 text-white">
+          {activity.title || activity.description?.split('(')[0]}
         </h3>
-        <p className="text-slate-500 text-xs mb-6 flex-grow leading-relaxed italic line-clamp-2">
+        <p className="text-slate-400 text-xs mb-6 flex-grow leading-relaxed font-medium italic line-clamp-3">
           "{activity.description}"
         </p>
 
         <div className="flex justify-between items-center">
-          <span className="text-indigo-400 font-black text-lg">+{activity.xp_reward} <span className="text-xs font-normal text-slate-500">XP</span></span>
-          {activity.confidence && (
-            <span className="text-[10px] text-slate-500">
-              {(activity.confidence * 100).toFixed(0)}% match
-            </span>
-          )}
+          <span className="text-indigo-400 font-black text-lg">
+            {isBA ? 'Recovery step' : `+${activity.xp_reward || 50} XP`}
+          </span>
+          {isBA && <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Activation week 1</span>}
         </div>
 
         <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-          <span>Activate</span>
+          <span>{isBA ? 'Begin Activation' : 'Activate'}</span>
           <span className="group-hover:translate-x-1 transition-transform">→</span>
         </div>
       </div>
@@ -352,6 +360,11 @@ const Dashboard: React.FC = () => {
                 </motion.div>
               ) : null}
             </AnimatePresence>
+          </div>
+
+          {/* Peer Support Feed */}
+          <div className="mt-8">
+            <PeerSupport />
           </div>
         </div>
 

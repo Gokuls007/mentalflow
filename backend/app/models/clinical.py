@@ -30,11 +30,11 @@ class Activity(Base):
     description = Column(Text)
     values = Column(JSONB) # Array of user values
     
-    # GAN Extensions
-    source = Column(String(50), default="static", index=True) # static, rl, gan
-    gan_embedding = Column(JSONB) # The latent vector produced by the Generator
-    personalization_score = Column(Float) # Alignment score
-    clinical_explanation = Column(Text) # "Why this activity" logic
+    # Behavioral Activation (BA) Extensions
+    source = Column(String(50), default="static", index=True) # static, rl, gan, ba_prescription
+    is_micro_habit = Column(Boolean, default=False)
+    ba_week = Column(Integer)
+    clinical_explanation = Column(Text)
     
     completion_count = Column(Integer, default=0, nullable=False)
     last_completed = Column(DateTime)

@@ -90,13 +90,30 @@ const TherapistDashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Behavioral Activation Plan Visibility */}
+              <div className="mb-6 p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                <div className="flex justify-between items-center mb-3">
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">BA Week {client.id === 'C001' ? 1 : 3}</p>
+                  <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-bold">PHYSICAL</span>
+                </div>
+                <p className="text-sm font-bold text-slate-200 mb-2">{client.id === 'C001' ? '5 min walk' : 'Walk with a friend'}</p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5, 6, 7].map(day => (
+                    <div 
+                      key={day} 
+                      className={`h-1.5 flex-1 rounded-full ${day < (client.id === 'C001' ? 3 : 6) ? 'bg-indigo-400' : 'bg-white/5'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between pt-6 border-t border-white/5">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  {client.status === 'Deteriorating' ? <TrendingDown className="w-3 h-3 text-red-400" /> : <AlertCircle className="w-3 h-3 text-indigo-400" />}
+                  {client.status === 'Deteriorating' ? <TrendingDown className="w-3 h-3 text-red-400" /> : <TrendingDown className="w-3 h-3 text-emerald-400 rotate-180" />}
                   <span>{client.status}</span>
                 </div>
                 <button className="text-indigo-400 text-xs font-bold hover:underline transition">
-                  Full Clinical History →
+                  Review Plan →
                 </button>
               </div>
             </motion.div>
