@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 const MoodPulse = ({ mood = 6 }) => {
   // Determine color based on mood (1-10)

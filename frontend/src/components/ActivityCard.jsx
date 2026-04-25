@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Activity as ActivityIcon } from 'lucide-react';
 
 const ActivityCard = ({ title, category, difficulty, xp, onComplete }) => {

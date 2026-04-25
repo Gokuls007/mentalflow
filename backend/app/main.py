@@ -9,6 +9,11 @@ from app.api.v1.api import api_router
 from app.config import settings
 from app.db.base import Base # Import consolidated models
 from app.db.database import engine
+import logging
+
+# Setup Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Create tables on startup for local stabilization
 Base.metadata.create_all(bind=engine)

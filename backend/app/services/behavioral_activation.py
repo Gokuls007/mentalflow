@@ -43,7 +43,8 @@ class BehavioralActivationService:
         Determines the user's current BA week and next prescribed task.
         """
         # Calculate week since user joined/started BA
-        days_active = (datetime.utcnow() - user.created_at).days
+        created_at = user.created_at or datetime.utcnow()
+        days_active = (datetime.utcnow() - created_at).days
         current_week = (days_active // 7) + 1
         current_week = min(4, current_week) # Cap at 4 weeks for this phase
         
