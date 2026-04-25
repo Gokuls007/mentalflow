@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/game.store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow } from '../chat/ChatWindow';
 import { ClinicalOutcomes } from './ClinicalOutcomes';
+import { MoodField } from './MoodField';
 import PeerSupport from './PeerSupport';
 import { apiClient } from '../../services/api';
 
@@ -251,11 +252,16 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
-      <div className="max-w-7xl mx-auto px-6 py-8 lg:px-10 lg:py-10">
+    <div className="min-h-screen bg-[#0f172a] text-white relative overflow-hidden">
+      {/* Generative Mood Field - Deep Biofeedback */}
+      <MoodField 
+        phq9={user?.latest_phq9_score || 15} 
+        gad7={user?.latest_gad7_score || 12} 
+      />
 
+      <div className="max-w-7xl mx-auto px-6 py-8 lg:px-10 lg:py-10 relative z-10">
         {/* ── Header ── */}
-        <header className="flex justify-between items-center mb-12">
+        <header className="mb-12 flex justify-between items-end">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
               Welcome back, {user?.firstName || 'Alex'}
