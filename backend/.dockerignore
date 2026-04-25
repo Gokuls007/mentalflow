@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+.env
+.git
+.github
+.venv
+venv
+node_modules
+*.db
+*.sqlite3
+.pytest_cache
+htmlcov
+.coverage
+models/*.pt

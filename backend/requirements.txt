@@ -1,0 +1,39 @@
+# Core Web Framework
+fastapi>=0.109.0
+uvicorn>=0.27.0
+sqlalchemy>=2.0.25
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+
+# Auth & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+cryptography>=42.0.2
+
+# Database
+# psycopg2-binary>=2.9.9  # Only needed for PostgreSQL
+alembic>=1.13.1
+
+# Utilities
+python-dotenv>=1.0.1
+slowapi>=0.1.9
+httptools>=0.6.1
+
+# Clinical AI Chatbot
+langchain>=0.1.0
+langchain-groq>=0.0.1
+langgraph>=0.0.1
+
+# ML/RL Dependencies
+numpy>=1.26.3
+scikit-learn>=1.4.0
+stable-baselines3>=2.2.1
+gymnasium>=0.29.1
+torch>=2.1.1  # Required by stable-baselines3 and GAN
+apscheduler>=3.10.4
+
+# Infrastructure (optional for local dev)
+# redis>=5.0.1
+# celery>=5.3.6
+# gunicorn>=21.2.0
