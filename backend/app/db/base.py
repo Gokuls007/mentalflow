@@ -6,3 +6,4 @@ from app.models.rl import RLState # noqa
 from app.models.audit import AuditLog # noqa
 from app.models.chat_message import ChatMessage # noqa
 from app.models.crisis_alert import CrisisAlert # noqa
+from app.models.therapist import Therapist, ClinicalPrescription # noqa

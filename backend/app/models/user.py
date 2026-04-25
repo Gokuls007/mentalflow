@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Index, func, CheckConstraint, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Index, func, CheckConstraint, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.base_class import Base
@@ -36,7 +36,7 @@ class User(Base):
     
     # Roles & Clinical Management
     role = Column(String(50), default="patient") # patient, professional, researcher
-    assigned_professional_id = Column(Integer, ForeignKey("user.id"), nullable=True)
+    therapist_id = Column(Integer, ForeignKey("therapist.id", ondelete="SET NULL"), nullable=True)
     
     # Metadata
     is_active = Column(Boolean, default=True, index=True)
@@ -45,6 +45,9 @@ class User(Base):
     last_login = Column(DateTime)
     
     # Relationships
+    therapist_profile = relationship("Therapist", back_populates="user", uselist=False, foreign_keys="Therapist.user_id")
+    assigned_therapist = relationship("Therapist", back_populates="patients", foreign_keys=[therapist_id])
+    
     activities = relationship("Activity", back_populates="user", cascade="all, delete-orphan")
     mood_logs = relationship("MoodLog", back_populates="user", cascade="all, delete-orphan")
     assessments = relationship("Assessment", back_populates="user", cascade="all, delete-orphan")
