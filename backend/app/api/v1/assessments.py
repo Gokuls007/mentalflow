@@ -1,36 +1,69 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from typing import List
-from app.schemas.assessment import PHQ9Create, GAD7Create, PHQ9Response, GAD7Response, AssessmentHistoryResponse
-from app.services.assessment_service import AssessmentService
-from app.security.auth import get_current_user
 from app.db.database import get_db
+from app.security.auth import get_current_user
+from app.ai.adaptive_assessment import AdaptiveAssessmentIRT
+from app.models.clinical import Assessment
+from pydantic import BaseModel
+from typing import Dict, Optional, List
+from datetime import datetime
 
 router = APIRouter()
-assessment_service = AssessmentService()
 
-@router.post("/phq9", response_model=PHQ9Response, status_code=status.HTTP_201_CREATED)
-async def submit_phq9(
-    phq9_in: PHQ9Create,
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return assessment_service.create_assessment(db, current_user.id, "phq9", phq9_in)
+class AdaptiveSession(BaseModel):
+    responses: Dict[int, int] # item_id -> score (0-3)
 
-@router.post("/gad7", response_model=GAD7Response, status_code=status.HTTP_201_CREATED)
-async def submit_gad7(
-    gad7_in: GAD7Create,
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
+@router.post("/adaptive/next-question")
+async def get_next_question(
+    session: AdaptiveSession,
+    current_user = Depends(get_current_user)
 ):
-    return assessment_service.create_assessment(db, current_user.id, "gad7", gad7_in)
+    """
+    Returns the next most informative PHQ-9 question based on IRT.
+    """
+    theta = AdaptiveAssessmentIRT.estimate_theta(session.responses)
+    next_item_id = AdaptiveAssessmentIRT.get_next_item(session.responses, theta)
+    
+    if next_item_id is None:
+        return {"status": "complete", "theta": theta, "final_score": AdaptiveAssessmentIRT.map_theta_to_score(theta)}
+        
+    question = AdaptiveAssessmentIRT.PHQ9_PARAMS[next_item_id]
+    return {
+        "status": "in_progress",
+        "item_id": next_item_id,
+        "text": question["text"],
+        "theta_current": theta
+    }
 
-@router.get("/history", response_model=AssessmentHistoryResponse)
-async def get_history(
-    type: str = Query("all"),
-    limit: int = Query(20, ge=1, le=100),
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
+@router.post("/adaptive/submit")
+async def submit_adaptive_assessment(
+    session: AdaptiveSession,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    # AssessmentService historical method returns a dict matching the schema
-    return assessment_service.get_assessment_history(db, current_user.id, assessment_type=type, limit=limit)
+    """
+    Finalizes the IRT-based assessment and stores the clinical score.
+    """
+    theta = AdaptiveAssessmentIRT.estimate_theta(session.responses)
+    final_score = AdaptiveAssessmentIRT.map_theta_to_score(theta)
+    
+    assessment = Assessment(
+        user_id=current_user.id,
+        type="phq9_adaptive",
+        score=final_score,
+        responses=session.responses,
+        date=datetime.utcnow().date()
+    )
+    
+    # Update User model with latest clinical state
+    current_user.latest_phq9_score = final_score
+    
+    db.add(assessment)
+    db.commit()
+    
+    return {
+        "status": "success",
+        "score": final_score,
+        "theta": theta,
+        "severity": assessment.severity
+    }

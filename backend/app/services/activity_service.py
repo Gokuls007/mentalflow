@@ -5,6 +5,7 @@ from app.models.clinical import Activity, GameSession
 from app.models.user import User
 from app.schemas.activity import ActivityCreate, ActivityUpdate
 from app.services.behavioral_activation import BehavioralActivationService
+from app.ai.rl_engine import clinical_bandit, DigitalPhenotypeEngine
 
 # Optional RL import - not required for basic activity CRUD
 try:
@@ -29,15 +30,35 @@ class ActivityService:
         limit: int = 50,
         offset: int = 0
     ) -> List[Activity]:
-        # Check and prescribe BA tasks first
+        # 1. Fetch user context
         user = db.query(User).filter_by(id=user_id).first()
-        if user:
-            BehavioralActivationService.prescribe_ba_activities(user, db)
+        if not user:
+            return []
+            
+        # 2. Extract Digital Phenotype Context
+        # In a full system, we'd pull wearable_data from a separate service/table
+        context = DigitalPhenotypeEngine.extract_features(user)
+        
+        # 3. Use LinUCB to select the optimal intervention category
+        available_arms = ["physical", "social", "cognitive", "self_care"]
+        best_arm = clinical_bandit.select_arm(context, available_arms)
+        
+        # 4. Check/Prescribe BA task for the best clinical arm
+        # We override the user's default trigger with the RL's best arm
+        user.anxiety_trigger = best_arm
+        BehavioralActivationService.prescribe_ba_activities(user, db)
             
         query = db.query(Activity).filter(Activity.user_id == user_id)
         if activity_type:
             query = query.filter(Activity.type == activity_type)
-        return query.order_by(Activity.date_scheduled.desc()).offset(offset).limit(limit).all()
+        else:
+            # Prioritize the RL-selected category
+            query = query.order_by(
+                (Activity.type == best_arm).desc(), 
+                Activity.date_scheduled.desc()
+            )
+            
+        return query.offset(offset).limit(limit).all()
         
     def create_activity(self, db: Session, user_id: int, activity_in: ActivityCreate) -> Activity:
         db_activity = Activity(
