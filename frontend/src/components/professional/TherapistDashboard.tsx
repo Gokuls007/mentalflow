@@ -18,8 +18,64 @@ const TherapistDashboard: React.FC = () => {
     { id: 'C003', name: 'Sarah Chen', phq9: 14, gad7: 9, risk: 'medium', status: 'Recovering', week: 2, type: 'COGNITIVE', activity: '10 min journaling', progress: [1, 1, 0, 1, 0, 0, 0] },
   ];
 
+  const [isPrescribing, setIsPrescribing] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#080c14] text-slate-200">
+      {/* ── Clinical Intervention Modal ── */}
+      <AnimatePresence>
+        {isPrescribing && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#080c14]/90 backdrop-blur-xl p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="w-full max-w-xl bg-slate-900 border border-white/10 rounded-[40px] p-10 shadow-2xl"
+            >
+              <h2 className="text-3xl font-black text-white mb-2">Clinical Override</h2>
+              <p className="text-slate-500 mb-8">Directly adjust the Behavioral Activation protocol for {selectedPatient?.name}.</p>
+              
+              <div className="space-y-6 mb-10">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2 block">Intervention Type</label>
+                  <select className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-indigo-500 transition">
+                    <option>Reduce Intensity (Gentleness Protocol)</option>
+                    <option>Increase Social Activation</option>
+                    <option>Crisis Support Check-in</option>
+                    <option>Switch to Maintenance Phase</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2 block">Personal Message</label>
+                  <textarea 
+                    placeholder="E.g., I noticed your mood trend is dipping. Let's focus on small wins this week..."
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white h-32 focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsPrescribing(false)}
+                  className="flex-1 py-4 rounded-2xl bg-white/5 text-slate-300 font-bold hover:bg-white/10 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => setIsPrescribing(false)}
+                  className="flex-1 py-4 rounded-2xl bg-indigo-500 text-white font-black hover:bg-indigo-600 transition shadow-lg shadow-indigo-500/30"
+                >
+                  Push to Patient
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <nav className="border-b border-white/5 bg-slate-900/50 backdrop-blur-md px-10 py-4 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
@@ -122,7 +178,14 @@ const TherapistDashboard: React.FC = () => {
                   {client.status === 'Deteriorating' ? <TrendingDown className="w-4 h-4 text-red-400" /> : <TrendingDown className="w-4 h-4 text-emerald-400 rotate-180" />}
                   <span>{client.status}</span>
                 </div>
-                <button className="text-indigo-400 text-xs font-black uppercase tracking-widest hover:text-white transition">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPatient(client);
+                    setIsPrescribing(true);
+                  }}
+                  className="text-indigo-400 text-xs font-black uppercase tracking-widest hover:text-white transition"
+                >
                   Adjust Plan →
                 </button>
               </div>

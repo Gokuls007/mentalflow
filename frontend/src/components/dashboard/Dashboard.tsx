@@ -279,6 +279,31 @@ const Dashboard: React.FC = () => {
           </div>
         </header>
 
+        {/* ── AI Empathy Engine: Clinical Insights ── */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12 p-6 rounded-[32px] bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl relative z-10 overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ShieldCheck className="w-24 h-24 text-indigo-400 rotate-12" />
+          </div>
+          <div className="flex items-start gap-4 relative z-10">
+            <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">💡</span>
+            </div>
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2">AI Clinical Insight</h3>
+              <p className="text-sm font-medium text-slate-300 italic leading-relaxed max-w-3xl">
+                "{user?.latest_phq9_score > 15 
+                  ? "I noticed your energy has been low lately. Recovery isn't a race—today, let's focus on a single micro-habit. One small task is a massive victory."
+                  : "You're building the foundation of a new routine. Every activity we prescribe is a calculated step toward your recovery goal. You're doing the real work."
+                }"
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
         {/* ── Recovery Path (REAL Outcomes) ── */}
         <section className="mb-12">
           <ClinicalOutcomes />

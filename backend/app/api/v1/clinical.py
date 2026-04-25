@@ -33,3 +33,14 @@ async def get_my_recovery_progress(
     """
     tracker = ClinicalOutcomeTracker(db)
     return tracker.get_recovery_progress(current_user.id)
+from app.services.empathy_engine import empathy_engine
+
+@router.get("/insights/me")
+async def get_my_insights(
+    current_user = Depends(get_current_user)
+):
+    """
+    Get AI-generated clinical insights for the user.
+    """
+    insight = empathy_engine.generate_insight(current_user)
+    return {"insight": insight}

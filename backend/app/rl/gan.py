@@ -101,6 +101,29 @@ class ActivityGAN:
         torch.save(self.generator.state_dict(), "models/activity_generator.pth")
         torch.save(self.discriminator.state_dict(), "models/activity_discriminator.pth")
         
+    def generate_visual_theme(self, embedding):
+        """
+        Maps a GAN embedding to Phaser visual parameters.
+        Transitions the app into a Generative Experience.
+        """
+        # Take chunks of the 256d embedding to derive visual properties
+        colors = embedding[:3] # RGB-like floats [-1, 1]
+        physics = embedding[3:6]
+        
+        # Normalize to useful ranges
+        primary_hue = int((colors[0] + 1) * 180) # 0-360
+        gravity_scale = 0.5 + (physics[0] + 1) * 0.5 # 0.5 to 1.5
+        speed_scale = 0.8 + (physics[1] + 1) * 0.4 # 0.8 to 1.6
+        
+        return {
+            "primaryColor": f"hsl({primary_hue}, 70%, 60%)",
+            "secondaryColor": f"hsl({(primary_hue + 40) % 360}, 60%, 50%)",
+            "gravity": gravity_scale,
+            "speed": speed_scale,
+            "bloomIntensity": abs(embedding[10]) * 2.0,
+            "particles": "nebula" if embedding[11] > 0 else "sparkle"
+        }
+
     def load_model(self):
         if os.path.exists("models/activity_generator.pth"):
             self.generator.load_state_dict(torch.load("models/activity_generator.pth", map_location=self.device))
