@@ -44,8 +44,12 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.on_event("startup")
 async def startup_event():
     try:
-        from app.ai.rl_training import schedule_daily_training
-        schedule_daily_training()
+        # Start background jobs for clinical sync and AI retraining
+        from app.jobs.clinical_jobs import schedule_clinical_jobs
+        schedule_clinical_jobs()
+        logger.info("🎮 Real game mechanics activated!")
+    except Exception as e:
+        logger.error(f"Failed to start clinical scheduler: {e}")
     except ImportError:
         pass # Handle gracefully if ML deps not fully loaded
 

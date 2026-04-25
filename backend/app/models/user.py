@@ -23,6 +23,17 @@ class User(Base):
     rl_model_path = Column(String(500))
     rl_last_updated = Column(DateTime)
     
+    # Game Mechanics (Closed Loop)
+    total_xp = Column(Integer, default=0, nullable=False)
+    current_level = Column(Integer, default=1, nullable=False)
+    current_streak = Column(Integer, default=0, nullable=False)
+    unlocked_features = Column(JSON, default=[]) # Features like 'mood_chart', 'clinical_ai'
+    
+    # Live Clinical Scores (Updated by AI)
+    latest_phq9_score = Column(Integer)
+    latest_gad7_score = Column(Integer)
+    clinical_severity = Column(String(50)) # Minimal, Mild, Moderate, etc.
+    
     # Roles & Clinical Management
     role = Column(String(50), default="patient") # patient, professional, researcher
     assigned_professional_id = Column(Integer, ForeignKey("user.id"), nullable=True)

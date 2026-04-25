@@ -13,3 +13,12 @@ class RLMetricsResponse(BaseModel):
     last_training: Optional[datetime] = None
     adaptation_effectiveness: float # 0-1
     predicted_next_difficulty: str
+
+class GameResultSubmit(BaseModel):
+    activity_id: int
+    score: int
+    duration: int
+    completed: bool
+    mood_before: int
+    mood_after: int
+    engagement_rating: int

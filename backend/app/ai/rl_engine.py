@@ -1,142 +1,128 @@
 import numpy as np
 import os
-import torch
 import logging
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv
-from app.ai.gymnasium_env import MentalHealthEnv
+import pickle
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
+from app.ai.gymnasium_env import MentalHealthEnv
 
 logger = logging.getLogger(__name__)
 
-class RLEngine:
+class LinUCBEngine:
     """
-    Reinforcement Learning Engine for adaptive difficulty
+    Contextual Multi-Armed Bandit using LinUCB algorithm
+    SOTA for clinical personalized recommendations.
     
-    Uses PPO (Proximal Policy Optimization) to learn:
-    - When to recommend EASY activities (user struggling)
-    - When to recommend MEDIUM activities (normal)
-    - When to recommend HARD activities (user doing well)
+    Models reward for each difficulty as a linear function of user state.
     """
     
-    def __init__(self, model_path: str = "models/rl_model.zip"):
+    def __init__(self, state_dim: int = 6, n_actions: int = 3, alpha: float = 1.0, model_path: str = "models/linucb_model.pkl"):
+        self.state_dim = state_dim
+        self.n_actions = n_actions
+        self.alpha = alpha # Exploration parameter
         self.model_path = model_path
-        self.model = None
-        self.load_or_create_model()
-    
-    def load_or_create_model(self):
-        """Load existing model or create new one"""
         
+        # Initialize LinUCB parameters for each action
+        # A: (n_actions, state_dim, state_dim) identity matrices
+        # b: (n_actions, state_dim) zero vectors
+        self.A = [np.identity(state_dim) for _ in range(n_actions)]
+        self.b = [np.zeros(state_dim) for _ in range(n_actions)]
+        
+        self.load_model()
+        
+    def load_model(self):
         if os.path.exists(self.model_path):
-            logger.info("Loading existing RL model")
             try:
-                self.model = PPO.load(self.model_path)
+                with open(self.model_path, 'rb') as f:
+                    data = pickle.load(f)
+                    self.A = data['A']
+                    self.b = data['b']
+                logger.info(f"Loaded LinUCB model from {self.model_path}")
             except Exception as e:
-                logger.error(f"Failed to load RL model: {e}")
-                self._create_new_model()
-        else:
-            logger.info("Creating new RL model")
-            self._create_new_model()
-            
-    def _create_new_model(self):
-        # Dummy environment for initialization
-        env = DummyVecEnv([lambda: MentalHealthEnv(user_id=1, db=None)])
-        self.model = PPO(
-            "MlpPolicy",
-            env,
-            learning_rate=3e-4,
-            n_steps=128,
-            batch_size=64,
-            n_epochs=10,
-            verbose=1
-        )
+                logger.error(f"Failed to load LinUCB model: {e}")
+                
+    def save_model(self):
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-        # Save initial model
-        self.model.save(self.model_path)
-    
-    def predict_difficulty(self, user_state: np.ndarray) -> dict:
+        with open(self.model_path, 'wb') as f:
+            pickle.dump({'A': self.A, 'b': self.b}, f)
+        logger.info(f"Saved LinUCB model to {self.model_path}")
+        
+    def predict_difficulty(self, state: np.ndarray) -> Dict:
         """
-        Predict difficulty for user
-        
-        Returns:
-        {
-            "difficulty": "EASY" | "MEDIUM" | "HARD",
-            "confidence": 0.0-1.0,
-            "action_probs": [prob_easy, prob_medium, prob_hard]
-        }
+        Predict best difficulty using UCB scores
         """
+        x = state.reshape(-1, 1)
+        p = np.zeros(self.n_actions)
         
-        if self.model is None:
-            # Fallback: recommend MEDIUM
-            return {
-                "difficulty": "MEDIUM",
-                "confidence": 0.5,
-                "action_probs": [0.33, 0.34, 0.33]
-            }
-        
-        # Get action probabilities
-        action, _ = self.model.predict(user_state, deterministic=True)
-        
-        # Get policy probabilities (confidence)
-        policy = self.model.policy
-        
-        # Forward pass to get probabilities
-        obs_tensor = torch.as_tensor(user_state.reshape(1, -1)).to(policy.device)
-        with torch.no_grad():
-            features = policy.extract_features(obs_tensor)
-            latent_pi, _ = policy.mlp_extractor(features)
-            distribution = policy.action_net(latent_pi)
-            probs = torch.softmax(distribution, dim=-1).cpu().numpy()[0]
-        
-        confidence = float(probs[int(action)])
+        for a in range(self.n_actions):
+            A_inv = np.linalg.inv(self.A[a])
+            theta = A_inv @ self.b[a].reshape(-1, 1)
+            
+            # UCB score = expected_reward + uncertainty_bonus
+            expected_reward = theta.T @ x
+            uncertainty = self.alpha * np.sqrt(x.T @ A_inv @ x)
+            p[a] = expected_reward + uncertainty
+            
+        action = np.argmax(p)
         difficulty_map = {0: "EASY", 1: "MEDIUM", 2: "HARD"}
         
+        # Calculate pseudo-probabilities for confidence reporting
+        exp_p = np.exp(p - np.max(p))
+        probs = exp_p / exp_p.sum()
+        
         return {
-            "difficulty": difficulty_map[int(action)],
-            "confidence": float(confidence),
-            "action_probs": probs.tolist()
+            "difficulty": difficulty_map[action],
+            "confidence": float(probs[action]),
+            "action_probs": probs.tolist(),
+            "ucb_scores": p.tolist()
         }
-    
-    def train_on_user_feedback(self, user_id: int, db: Session, timesteps: int = 500):
+        
+    def update(self, state: np.ndarray, action: int, reward: float):
         """
-        Train RL model on user's recent activities
-        Called daily or when enough new data available
+        Update LinUCB parameters with observed reward
         """
+        x = state.reshape(-1, 1)
+        self.A[action] += x @ x.T
+        self.b[action] += reward * x.flatten()
+        self.save_model()
         
-        logger.info(f"Training RL model on user {user_id} data")
+    def train_on_batch(self, experiences: List[Dict]):
+        """
+        Batch update from historical data
+        experiences: list of {'state': np.ndarray, 'action': int, 'reward': float}
+        """
+        for exp in experiences:
+            self.update(exp['state'], exp['action'], exp['reward'])
+
+class RLEngine:
+    """Wrapper for LinUCB to maintain API compatibility"""
+    def __init__(self, model_path: str = "models/linucb_model.pkl"):
+        self.engine = LinUCBEngine(model_path=model_path)
         
-        env = DummyVecEnv([lambda: MentalHealthEnv(user_id=user_id, db=db)])
+    def predict_difficulty(self, user_state: np.ndarray) -> dict:
+        return self.engine.predict_difficulty(user_state)
         
-        if self.model is None:
-            self._create_new_model()
-            
-        self.model.set_env(env)
-        
-        # Train for N steps
-        self.model.learn(total_timesteps=timesteps)
-        
-        # Save updated model
-        self.model.save(self.model_path)
-        logger.info(f"RL model saved to {self.model_path}")
-    
     def update_reward(self, user_id: int, activity_id: int, 
                      completed: bool, pre_mood: int, post_mood: int, 
                      engagement: int, db: Session):
-        """
-        Update model with reward after user completes activity
-        """
-        
-        env = MentalHealthEnv(user_id=user_id, db=db)
-        reward = env.calculate_reward(completed, pre_mood, post_mood, engagement)
-        
-        logger.info(f"User {user_id} activity {activity_id}: reward={reward:.2f}")
-    
-    def get_metrics(self, user_id: int, db: Session) -> dict:
-        """Get RL metrics for user"""
         
         env = MentalHealthEnv(user_id=user_id, db=db)
         state = env._get_state()
+        reward = env.calculate_reward(completed, pre_mood, post_mood, engagement)
         
+        # Find which action was taken for this activity
+        # In a real app, you'd store the action index in the Activity model
+        # For now, let's derive it or fetch it from the latest RL state
+        from app.models.rl import RLState
+        rl_state = db.query(RLState).filter_by(user_id=user_id).first()
+        action = rl_state.last_action if rl_state else 1
+        
+        self.engine.update(state, action, reward)
+        logger.info(f"RL Updated for user {user_id}: reward={reward:.2f}")
+
+    def get_metrics(self, user_id: int, db: Session) -> dict:
+        env = MentalHealthEnv(user_id=user_id, db=db)
+        state = env._get_state()
         prediction = self.predict_difficulty(state)
         
         return {
@@ -155,7 +141,8 @@ class RLEngine:
                 "easy": prediction["action_probs"][0],
                 "medium": prediction["action_probs"][1],
                 "hard": prediction["action_probs"][2]
-            }
+            },
+            "ucb_scores": prediction["ucb_scores"]
         }
 
 # Global instance

@@ -23,7 +23,7 @@ async def generate_activity(user_id: int, db: Session = Depends(get_db)):
     user_state = env._get_state()
     
     # Generate with GAN
-    activity_data = gan_engine.generate_activity(user_state)
+    activity_data = await gan_engine.generate_activity(user_state)
     
     # Create new activity in DB
     new_activity = Activity(

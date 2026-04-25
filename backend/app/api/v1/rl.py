@@ -5,6 +5,9 @@ from app.models.user import User
 from app.models.rl import RLState
 from app.ai.rl_engine import rl_engine
 from app.ai.gymnasium_env import MentalHealthEnv
+from app.schemas.rl import GameResultSubmit
+from app.models.clinical import GameSession, Activity
+from app.services.clinical import calculate_xp_and_impact
 import numpy as np
 from datetime import datetime
 
@@ -96,3 +99,70 @@ async def get_rl_metrics(user_id: int, db: Session = Depends(get_db)):
     metrics = rl_engine.get_metrics(user_id, db)
     
     return metrics
+@router.post("/submit-game-results")
+async def submit_game_results(
+    result: GameResultSubmit,
+    db: Session = Depends(get_db)
+):
+    """
+    Submit results of a game session and update RL + Game Mechanics
+    """
+    
+    # 1. Save GameSession record
+    game_session = db.query(GameSession).filter_by(activity_id=result.activity_id, completed=False).order_by(GameSession.created_at.desc()).first()
+    
+    if not game_session:
+        # Create new if not found
+        game_session = GameSession(
+            user_id=1, # In real app, get from current_user
+            activity_id=result.activity_id
+        )
+        db.add(game_session)
+    
+    game_session.score = result.score
+    game_session.completion_time = result.duration
+    game_session.completed = result.completed
+    game_session.mood_before = result.mood_before
+    game_session.mood_after = result.mood_after
+    game_session.engagement_rating = result.engagement_rating
+    
+    # 2. Mark Activity as completed
+    activity = db.query(Activity).filter_by(id=result.activity_id).first()
+    if activity:
+        activity.completed_at = datetime.utcnow()
+        activity.completion_count += 1
+    
+    # 3. Calculate REAL Clinical Impact (Symptom Reduction)
+    from app.services.clinical_outcomes import ClinicalOutcomeTracker
+    tracker = ClinicalOutcomeTracker(db)
+    clinical_outcomes = tracker.calculate_clinical_impact(user.id, {
+        "type": activity.type if activity else "SELF_CARE",
+        "pre_mood": result.mood_before,
+        "post_mood": result.mood_after,
+        "engagement": result.engagement_rating,
+        "completed": result.completed
+    })
+    
+    # Still track XP for legacy gamification
+    impact = calculate_xp_and_impact(user, game_session, db)
+    
+    # 4. Update RL Engine
+    rl_engine.update_reward(
+        user_id=user.id,
+        activity_id=result.activity_id,
+        completed=result.completed,
+        pre_mood=result.mood_before,
+        post_mood=result.mood_after,
+        engagement=result.engagement_rating,
+        db=db
+    )
+    
+    db.commit()
+    
+    return {
+        "status": "success",
+        "impact": impact,
+        "clinical_outcomes": clinical_outcomes,
+        "xp_earned": impact["xp_earned"],
+        "new_level": impact["new_level"]
+    }

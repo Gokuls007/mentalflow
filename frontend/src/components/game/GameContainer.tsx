@@ -17,6 +17,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ activityId }) => {
   const [gameState, setGameState] = useState<'loading' | 'pre-game' | 'playing' | 'post-game' | 'complete'>('loading');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [gameResult, setGameResult] = useState<any>(null);
+  const [clinicalOutcomes, setClinicalOutcomes] = useState<any>(null);
   const [moodBefore, setMoodBefore] = useState(5);
 
   const { startGame, endGame } = useGameStore();
@@ -102,7 +103,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ activityId }) => {
 
   const handlePostGameSubmit = async (moodAfter: number, engagement: number) => {
     try {
-      await apiService.submitGameSession({
+      const res = await apiService.submitGameSession({
         activity_id: activityId,
         difficulty_level: difficulty,
         score: gameResult?.score || 0,
@@ -112,6 +113,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ activityId }) => {
         mood_after: moodAfter,
         engagement_rating: engagement
       });
+      setClinicalOutcomes(res.clinical_outcomes);
     } catch (err) {
       console.warn('[Game] Failed to submit session, continuing in demo mode');
     }
@@ -157,19 +159,42 @@ const GameContainer: React.FC<GameContainerProps> = ({ activityId }) => {
           )}
 
           {gameState === 'complete' && (
-            <div className="p-10 bg-white/[0.04] backdrop-blur-2xl rounded-[32px] border border-white/10 text-center text-white max-w-md shadow-2xl">
+            <div className="p-10 bg-[#0f172a]/95 backdrop-blur-3xl rounded-[40px] border border-white/10 text-center text-white max-w-lg shadow-2xl">
               <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-4xl">✓</span>
+                <span className="text-4xl text-emerald-400">✓</span>
               </div>
-              <h2 className="text-3xl font-extrabold mb-3 tracking-tight">Daily Goal Achieved!</h2>
-              <p className="text-slate-400 mb-8 text-sm leading-relaxed">
-                Your emotional data has been synced with the clinical agent. Your RL model will adapt based on this session.
+              <h2 className="text-3xl font-black mb-3 tracking-tight">Protocol Success</h2>
+              
+              {clinicalOutcomes && (
+                <div className="my-8 space-y-4">
+                  <p className="text-emerald-400 font-bold text-sm uppercase tracking-widest">{clinicalOutcomes.clinical_significance}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[10px] text-slate-500 font-black uppercase mb-1">Depression</p>
+                      <p className="text-2xl font-black text-indigo-400">-{clinicalOutcomes.phq9.reduction}</p>
+                    </div>
+                    <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[10px] text-slate-500 font-black uppercase mb-1">Anxiety</p>
+                      <p className="text-2xl font-black text-purple-400">-{clinicalOutcomes.gad7.reduction}</p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-slate-400 text-xs italic leading-relaxed px-4">
+                    "{clinicalOutcomes.explanation}"
+                  </p>
+                </div>
+              )}
+
+              <p className="text-slate-500 mb-8 text-sm leading-relaxed">
+                Your clinical state has been neuroplastically updated. This session contributes to your long-term remission goal.
               </p>
+              
               <button 
                 onClick={() => window.location.href = '/dashboard'}
-                className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-2xl transition-all font-bold shadow-lg shadow-indigo-500/20"
+                className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-2xl transition-all font-black shadow-xl shadow-indigo-500/20"
               >
-                Return to Dashboard
+                Return to Recovery Path
               </button>
             </div>
           )}

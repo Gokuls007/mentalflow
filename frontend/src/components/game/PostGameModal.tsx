@@ -14,61 +14,77 @@ const PostGameModal: React.FC<PostGameModalProps> = ({ gameResult, onSubmit }) =
   const [moodAfter, setMoodAfter] = useState(5);
   const [engagement, setEngagement] = useState(5);
 
+  const analysisMap: Record<string, string> = {
+    easy_success: "Autonomic regulation achieved. Your ability to maintain a steady flow indicates high receptive capacity today.",
+    easy_failure: "Even restorative sessions can be challenging when energy is low. This data point helps us calibrate your baseline.",
+    medium_success: "Resilience verified. You managed moderate stimuli effectively, strengthening your cognitive-emotional boundaries.",
+    medium_failure: "Adaptive struggle detected. We will lower the stimulation threshold in your next session to prevent burnout.",
+    hard_success: "Executive breakthrough! Successfully navigating high-intensity challenges is a strong indicator of recovery momentum.",
+    hard_failure: "High-activation attempt logged. Pushing into high-challenge zones is therapeutic in itself, regardless of completion."
+  };
+
+  const key = `${gameResult.difficulty}_${gameResult.completed ? 'success' : 'failure'}`;
+  const insight = analysisMap[key] || "Session telemetry synced for clinical analysis.";
+
   return (
-    <div className="p-8 max-w-lg w-full bg-slate-800/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl text-white">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2">Session Complete</h2>
-        <p className="text-slate-400 text-sm italic">Training the Clinical Agent...</p>
+    <div className="p-10 max-w-lg w-full bg-[#0f172a]/95 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl text-white">
+      <div className="text-center mb-10">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-gradient-to-br ${gameResult.completed ? 'from-emerald-400 to-teal-500' : 'from-rose-400 to-orange-500'} shadow-lg`}>
+          <span className="text-4xl">{gameResult.completed ? '✓' : '!'}</span>
+        </div>
+        <h2 className="text-3xl font-black mb-1">Session Analyzed</h2>
+        <p className="text-slate-400 text-sm font-medium">Biometric Telemetry: SYNCED</p>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-10">
-        <div className="p-4 bg-white/5 rounded-2xl text-center">
-          <p className="text-xs text-slate-400 uppercase mb-1">Score</p>
-          <p className="text-2xl font-bold text-indigo-400">{gameResult.score}</p>
+      <div className="grid grid-cols-2 gap-4 mb-10">
+        <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Flow Points</p>
+          <p className="text-3xl font-black text-indigo-400">{gameResult.score.toLocaleString()}</p>
         </div>
-        <div className="p-4 bg-white/5 rounded-2xl text-center">
-          <p className="text-xs text-slate-400 uppercase mb-1">Time</p>
-          <p className="text-2xl font-bold text-emerald-400">{gameResult.duration}s</p>
-        </div>
-        <div className="p-4 bg-white/5 rounded-2xl text-center">
-          <p className="text-xs text-slate-400 uppercase mb-1">Status</p>
-          <p className={`text-sm font-bold uppercase mt-2 ${gameResult.completed ? 'text-green-400' : 'text-red-400'}`}>
-            {gameResult.completed ? 'Goal Met' : 'Incomplete'}
-          </p>
+        <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Duration</p>
+          <p className="text-3xl font-black text-emerald-400">{gameResult.duration}s</p>
         </div>
       </div>
 
-      {/* Mood Assessment After */}
-      <div className="space-y-8 mb-10">
+      {/* Clinical Insight */}
+      <div className="bg-white/[0.03] p-6 rounded-3xl border border-white/5 mb-10 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
+        <p className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-3">Clinical Insight</p>
+        <p className="text-slate-200 text-sm leading-relaxed font-medium">
+          {insight}
+        </p>
+      </div>
+
+      {/* Post-Mood Assessment */}
+      <div className="space-y-8 mb-12">
         <div>
-          <label className="block text-sm text-slate-400 mb-4">How do you feel AFTER the activity?</label>
+          <div className="flex justify-between items-center mb-4">
+            <label className="text-xs font-black uppercase tracking-widest text-slate-500">Post-Flow Mood</label>
+            <span className="text-xl font-bold text-indigo-300">{moodAfter}/10</span>
+          </div>
           <input 
             type="range" 
             min="1" 
             max="10" 
             value={moodAfter} 
             onChange={(e) => setMoodAfter(parseInt(e.target.value))}
-            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            className="w-full h-2 bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-500"
           />
-          <div className="flex justify-between text-xs text-slate-500 mt-2">
-            <span>Low Energy</span>
-            <span className="text-indigo-300 font-bold">{moodAfter}/10</span>
-            <span>High Energy</span>
-          </div>
         </div>
 
         <div>
-          <label className="block text-sm text-slate-400 mb-4">How engaging did you find this session?</label>
+          <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 block">Personalization Rating</label>
           <div className="flex justify-between gap-2">
             {[1, 2, 3, 4, 5].map((level) => (
               <button
                 key={level}
                 onClick={() => setEngagement(level)}
-                className={`flex-1 py-3 rounded-xl transition font-bold border ${
+                className={`flex-1 py-4 rounded-2xl transition-all font-black text-sm border ${
                   engagement === level 
-                  ? 'bg-indigo-500 border-indigo-400 shadow-lg shadow-indigo-500/20' 
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                  ? 'bg-indigo-500 border-indigo-400 shadow-xl shadow-indigo-500/20' 
+                  : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:text-slate-300'
                 }`}
               >
                 {level}
@@ -80,9 +96,9 @@ const PostGameModal: React.FC<PostGameModalProps> = ({ gameResult, onSubmit }) =
 
       <button 
         onClick={() => onSubmit(moodAfter, engagement)}
-        className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 transition font-bold text-lg shadow-xl"
+        className="w-full py-5 rounded-[24px] bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 transition-all font-black text-lg shadow-2xl shadow-indigo-500/20"
       >
-        Save & Sync Report
+        Complete & Save Data
       </button>
     </div>
   );

@@ -56,9 +56,9 @@ export const apiService = {
     return response.data;
   },
   
-  // Games
+  // Games & Clinical Tracking
   submitGameSession: async (data: any) => {
-    const response = await apiClient.post('/activities/complete', data);
+    const response = await apiClient.post('/rl/submit-game-results', data);
     return response.data;
   },
 

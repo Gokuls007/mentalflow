@@ -6,6 +6,7 @@ from app.api.v1.assessments import router as assessments_router
 from app.api.v1.rl import router as rl_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.gan import router as gan_router
+from app.api.v1.clinical import router as clinical_router
 
 api_router = APIRouter()
 
@@ -16,3 +17,4 @@ api_router.include_router(assessments_router, prefix="/assessments", tags=["asse
 api_router.include_router(rl_router, prefix="/rl", tags=["rl"])
 api_router.include_router(chat_router, prefix="/chat", tags=["chat"])
 api_router.include_router(gan_router, prefix="/gan", tags=["gan"])
+api_router.include_router(clinical_router, prefix="/clinical", tags=["clinical"])

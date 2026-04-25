@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from app.models.clinical import Assessment
+from app.models.user import User
 from app.schemas.assessment import PHQ9Create, GAD7Create
 
 class AssessmentService:
@@ -59,6 +60,15 @@ class AssessmentService:
             date=assessment_in.date
         )
         db.add(db_assessment)
+        
+        # Update user's cached clinical scores
+        user = db.query(User).filter_by(id=user_id).first()
+        if user:
+            if assessment_type == "phq9":
+                user.latest_phq9_score = score
+                user.clinical_severity = severity
+            elif assessment_type == "gad7":
+                user.latest_gad7_score = score
         
         # Safety Check
         crisis_level = 0
