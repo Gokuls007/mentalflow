@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List
 
 from app.db.database import get_db
 from app.models.user import User
@@ -10,46 +10,27 @@ from app.ai.clinical_chatbot import chatbot
 
 router = APIRouter()
 
-# Optional auth: tries token, falls back to None for demo mode
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.security.auth import decode_token
-
-optional_security = HTTPBearer(auto_error=False)
-
-DEMO_USER_ID = 1
+# Auth is optional: without a token the request acts as the demo user (DEMO_MODE)
+from app.security.auth import get_current_user_or_demo
 
 
-def _check_history_access(user_id: int, current_user: Optional[User]):
-    """Only the owner may read or clear a chat history; anonymous callers only get the demo user."""
-    allowed_id = current_user.id if current_user else DEMO_USER_ID
-    if user_id != allowed_id:
+def _check_history_access(user_id: int, current_user: User):
+    """Only the owner may read or clear a chat history."""
+    if user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
-async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
-    db: Session = Depends(get_db)
-) -> Optional[User]:
-    """Try to get current user; return None if no/invalid token (demo mode)."""
-    if credentials is None:
-        return None
-    token_data = decode_token(credentials.credentials)
-    if token_data is None:
-        return None
-    user = db.query(User).filter(User.id == token_data.user_id).first()
-    return user if user and user.is_active else None
 
 
 @router.post("/message", response_model=ChatMessageResponse)
 async def send_message(
     request: ChatMessageRequest,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user)
+    current_user: User = Depends(get_current_user_or_demo)
 ):
     """
     Send a message to the Clinical AI chatbot.
-    Works with or without authentication (demo mode uses user_id=1).
+    Works with or without authentication (demo mode uses the demo account).
     """
-    user_id = current_user.id if current_user else DEMO_USER_ID
+    user_id = current_user.id
     try:
         result = chatbot.chat(db=db, user_id=user_id, message=request.message)
         return ChatMessageResponse(**result)
@@ -63,7 +44,7 @@ async def send_message(
 async def get_history(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user)
+    current_user: User = Depends(get_current_user_or_demo)
 ):
     """
     Get chat history for a user. No auth required in demo mode (demo user only).
@@ -79,7 +60,7 @@ async def get_history(
 async def clear_history(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user)
+    current_user: User = Depends(get_current_user_or_demo)
 ):
     """
     Clear chat history for a user. No auth required in demo mode (demo user only).

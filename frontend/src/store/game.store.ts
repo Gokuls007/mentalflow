@@ -14,6 +14,8 @@ export interface GameStoreState {
   currentDifficulty: 'easy' | 'medium' | 'hard';
   difficultyHistory: Array<{ date: string; difficulty: string; completed: boolean }>;
   unlockedAchievements: string[];
+  activities: any[];
+  ganLoading: boolean;
 }
 
 interface GameStoreActions {
@@ -23,6 +25,8 @@ interface GameStoreActions {
   addXP: (amount: number) => void;
   unlockAchievement: (achievementId: string) => void;
   reset: () => void;
+  setActivities: (activities: any[]) => void;
+  setGanLoading: (loading: boolean) => void;
 }
 
 const initialState: GameStoreState = {
@@ -38,6 +42,8 @@ const initialState: GameStoreState = {
   currentDifficulty: 'medium',
   difficultyHistory: [],
   unlockedAchievements: [],
+  activities: [],
+  ganLoading: false,
 };
 
 export const useGameStore = create<GameStoreState & GameStoreActions>()(
@@ -109,9 +115,14 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         reset: () => {
           set(initialState);
         },
+
+        setActivities: (activities: any[]) => set({ activities }),
+        setGanLoading: (loading: boolean) => set({ ganLoading: loading }),
       }),
       {
         name: 'game-store',
+        // Activities are always re-fetched from the backend
+        partialize: ({ activities, ganLoading, ...rest }) => rest,
       }
     )
   )

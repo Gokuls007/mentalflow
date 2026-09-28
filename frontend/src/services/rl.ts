@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService, getActiveUserId } from './api';
 
 export interface RLPrediction {
   recommended_difficulty: 'easy' | 'medium' | 'hard';
@@ -22,7 +22,7 @@ export const rlService = {
   /**
    * Get difficulty prediction from the clinical PPO agent
    */
-  getPrediction: async (userId: number = 1): Promise<RLPrediction> => {
+  getPrediction: async (userId: number = getActiveUserId()): Promise<RLPrediction> => {
     try {
       // Backend returns { difficulty: 'EASY' | 'MEDIUM' | 'HARD', confidence, action_probabilities }
       const data = await apiService.getDifficultyPrediction(userId);

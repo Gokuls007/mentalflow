@@ -69,7 +69,7 @@ def test_rl_and_game_loop(client, auth_headers):
     r = client.post("/api/v1/rl/submit-game-results", json={
         "activity_id": activity_id, "score": 120, "duration": 60, "completed": True,
         "mood_before": 4, "mood_after": 6, "engagement_rating": 8, "difficulty_level": "easy",
-    })
+    }, headers=auth_headers)
     assert r.status_code == 200, r.text
     assert r.json()["xp_earned"] > 0
 

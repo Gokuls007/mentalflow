@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.security.auth import get_current_user
+from app.security.auth import get_current_user, get_current_user_or_demo
 from app.ai.adaptive_assessment import AdaptiveAssessmentIRT
 from app.models.clinical import Assessment
 from app.services.assessment_service import AssessmentService
 from pydantic import BaseModel, field_validator
-from typing import Dict, Optional, List
+from typing import Dict, List
 from datetime import datetime
 
 router = APIRouter()
@@ -85,3 +85,72 @@ async def submit_adaptive_assessment(
         # Item 9 (self-harm thoughts) answered above "Not at all"
         "crisis_level": 1 if session.responses.get(9, 0) >= 1 else 0
     }
+
+
+class StandardAssessmentSubmit(BaseModel):
+    responses: List[int]  # item scores in questionnaire order, each 0-3
+
+    @field_validator("responses")
+    @classmethod
+    def validate_scores(cls, v: List[int]) -> List[int]:
+        for idx, score in enumerate(v, start=1):
+            if not 0 <= score <= 3:
+                raise ValueError(f"Score for item {idx} must be between 0 and 3")
+        return v
+
+
+class PHQ9Submit(StandardAssessmentSubmit):
+    @field_validator("responses")
+    @classmethod
+    def validate_length(cls, v: List[int]) -> List[int]:
+        if len(v) != 9:
+            raise ValueError("PHQ-9 requires exactly 9 item scores")
+        return v
+
+
+class GAD7Submit(StandardAssessmentSubmit):
+    @field_validator("responses")
+    @classmethod
+    def validate_length(cls, v: List[int]) -> List[int]:
+        if len(v) != 7:
+            raise ValueError("GAD-7 requires exactly 7 item scores")
+        return v
+
+
+def _standard_result(result: dict) -> dict:
+    assessment = result["assessment"]
+    return {
+        "status": "success",
+        "id": assessment.id,
+        "type": assessment.type,
+        "score": result["score"],
+        "total_score": result["score"],
+        "severity": result["severity"],
+        "date": assessment.date.isoformat(),
+        "crisis_level": result["crisis_level"],
+    }
+
+
+@router.post("/phq9")
+async def submit_phq9(
+    data: PHQ9Submit,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_or_demo)
+):
+    """
+    Score and store a standard PHQ-9 (9 items, 0-3 each; total 0-27).
+    Item 9 answered above "Not at all" sets crisis_level=1.
+    """
+    result = AssessmentService().create_assessment(db, current_user.id, "phq9", data.responses)
+    return _standard_result(result)
+
+
+@router.post("/gad7")
+async def submit_gad7(
+    data: GAD7Submit,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_or_demo)
+):
+    """Score and store a standard GAD-7 (7 items, 0-3 each; total 0-21)."""
+    result = AssessmentService().create_assessment(db, current_user.id, "gad7", data.responses)
+    return _standard_result(result)

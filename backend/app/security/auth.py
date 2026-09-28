@@ -15,6 +15,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT configuration
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 class TokenData(BaseModel):
     user_id: int
@@ -90,3 +91,31 @@ async def get_current_user(
         )
     
     return user
+
+
+def get_demo_user(db: Session) -> Optional[User]:
+    """The seeded demo account (only available when DEMO_MODE is on)."""
+    if not settings.DEMO_MODE:
+        return None
+    return db.query(User).filter(User.email == settings.DEMO_USER_EMAIL, User.is_active == True).first()  # noqa: E712
+
+
+async def get_current_user_or_demo(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Dependency: the authenticated user, or the demo user when no token is sent
+    and DEMO_MODE is enabled. An invalid token is always rejected.
+    """
+    if credentials is not None:
+        return await get_current_user(credentials, db)
+
+    demo_user = get_demo_user(db)
+    if demo_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return demo_user

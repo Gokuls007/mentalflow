@@ -46,6 +46,12 @@ class APIClient {
 
 export const apiClient = new APIClient().instance_;
 
+// Seeded demo account used when nobody is logged in (backend DEMO_MODE)
+export const DEMO_USER_ID = 1;
+
+// Id of the logged-in user, or the demo account when nobody is logged in
+export const getActiveUserId = (): number => useUserStore.getState().user?.id || DEMO_USER_ID;
+
 export const apiService = {
   // Auth
   login: async (credentials: any) => {
@@ -53,6 +59,11 @@ export const apiService = {
     if (response.data.access_token) {
       localStorage.setItem('authToken', response.data.access_token);
     }
+    return response.data;
+  },
+
+  getMe: async () => {
+    const response = await apiClient.get('/users/me');
     return response.data;
   },
   
@@ -63,7 +74,7 @@ export const apiService = {
   },
 
   // RL & Personalization
-  getDifficultyPrediction: async (userId: number = 1) => {
+  getDifficultyPrediction: async (userId: number = getActiveUserId()) => {
     const response = await apiClient.get(`/rl/predict-difficulty/${userId}`);
     return response.data;
   },
@@ -84,24 +95,11 @@ export const apiService = {
     return response.data;
   },
 
-  submitAssessment: async (type: string, responses: number[]) => {
-    try {
-      const response = await apiClient.post(`/assessments/${type}`, {
-        responses,
-        total_score: responses.reduce((a, b) => a + b, 0)
-      });
-      return response.data;
-    } catch (error) {
-      // Fallback for demo mode when backend is unavailable
-      console.warn('[API] Assessment submission failed, using demo fallback');
-      const totalScore = responses.reduce((a, b) => a + b, 0);
-      return {
-        type,
-        total_score: totalScore,
-        severity: totalScore <= 4 ? 'minimal' : totalScore <= 9 ? 'mild' : totalScore <= 14 ? 'moderate' : totalScore <= 19 ? 'moderately_severe' : 'severe',
-        submitted_at: new Date().toISOString()
-      };
-    }
+  // Saves a PHQ-9 / GAD-7 and returns { score, total_score, severity, crisis_level, date }.
+  // Throws on failure so the caller can fall back to local scoring.
+  submitAssessment: async (type: 'phq9' | 'gad7', responses: number[]) => {
+    const response = await apiClient.post(`/assessments/${type}`, { responses });
+    return response.data;
   }
 };
 

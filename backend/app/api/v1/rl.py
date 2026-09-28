@@ -8,6 +8,7 @@ from app.ai.gymnasium_env import MentalHealthEnv
 from app.schemas.rl import GameResultSubmit
 from app.models.clinical import GameSession, Activity
 from app.services.clinical import calculate_xp_and_impact
+from app.security.auth import get_current_user_or_demo
 import numpy as np
 from datetime import datetime
 
@@ -102,29 +103,31 @@ async def get_rl_metrics(user_id: int, db: Session = Depends(get_db)):
 @router.post("/submit-game-results")
 async def submit_game_results(
     result: GameResultSubmit,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_or_demo)
 ):
     """
-    Submit results of a game session and update RL + Game Mechanics
+    Submit results of a game session and update RL + Game Mechanics.
+    Uses the logged-in user, or the demo account when no token is sent.
     """
     
-    activity = db.query(Activity).filter_by(id=result.activity_id).first()
+    # Only the user's own activity can be completed
+    activity = db.query(Activity).filter_by(id=result.activity_id, user_id=user.id).first()
 
     # 1. Save GameSession record
-    game_session = db.query(GameSession).filter_by(activity_id=result.activity_id, completed=False).order_by(GameSession.created_at.desc()).first()
+    game_session = None
+    if activity:
+        game_session = db.query(GameSession).filter_by(
+            activity_id=activity.id, user_id=user.id, completed=False
+        ).order_by(GameSession.created_at.desc()).first()
     
     if not game_session:
-        # Create new if not found (demo mode: fall back to user 1 when the activity is unknown)
         game_session = GameSession(
-            user_id=activity.user_id if activity else 1,
-            activity_id=result.activity_id if activity else None,
+            user_id=user.id,
+            activity_id=activity.id if activity else None,
             difficulty_level=result.difficulty_level
         )
         db.add(game_session)
-
-    user = db.query(User).filter_by(id=game_session.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
     
     game_session.score = result.score
     game_session.completion_time = result.duration

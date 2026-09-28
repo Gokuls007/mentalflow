@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
 from app.services.clinical_outcomes import ClinicalOutcomeTracker
-from app.security.auth import get_current_user
+from app.security.auth import get_current_user, get_current_user_or_demo
 
 router = APIRouter()
 
 @router.get("/progress/me")
 async def get_my_recovery_progress(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user_or_demo)
 ):
     """
     Shortcut for current user to see their own recovery path.
@@ -38,7 +38,7 @@ from app.services.empathy_engine import empathy_engine
 
 @router.get("/insights/me")
 async def get_my_insights(
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user_or_demo)
 ):
     """
     Get AI-generated clinical insights for the user.

@@ -7,6 +7,7 @@ import TherapistDashboard from './components/professional/TherapistDashboard';
 import InformedConsent from './components/legal/InformedConsent';
 import CrisisOverlay from './components/safety/CrisisOverlay';
 import { useUserStore } from './store/user.store';
+import { apiService, DEMO_USER_ID } from './services/api';
 
 // Pass the activity id from the URL (/game/:id) to the game, defaulting to 1 for the demo
 const GameRoute: React.FC = () => {
@@ -19,17 +20,34 @@ const App: React.FC = () => {
   const { user, setUser, clinicalSafetyLevel, role } = useUserStore();
 
   useEffect(() => {
-    // Mock user identification for Phase 4 demo
-    if (!user) {
+    // Use the logged-in account when a token exists; otherwise the seeded demo account
+    const setDemoUser = () => {
       setUser({
-        id: 1,
-        email: 'patient.demo@example.com',
-        firstName: 'Alex',
-        lastName: 'Resilience',
+        id: DEMO_USER_ID,
+        email: 'demo@mentalflow.local',
+        firstName: 'Demo',
+        lastName: 'User',
         role: 'patient'
       } as any);
+    };
+
+    if (localStorage.getItem('authToken')) {
+      apiService.getMe()
+        .then((me) => setUser({ ...me, firstName: me.first_name, lastName: me.last_name } as any))
+        .catch((err) => {
+          // Expired/invalid token: drop it. Network errors keep the stored session.
+          if (err?.response?.status === 401) {
+            localStorage.removeItem('authToken');
+            setDemoUser();
+          } else if (!user) {
+            setDemoUser();
+          }
+        });
+    } else if (!user || user.id !== DEMO_USER_ID) {
+      setDemoUser();
     }
-  }, [user, setUser]);
+    // Run once on load
+  }, []);
 
   return (
     <Router>

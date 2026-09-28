@@ -22,6 +22,12 @@ if settings.SECRET_KEY == DEFAULT_SECRET_KEY or settings.ENCRYPTION_KEY == DEFAU
 # Create tables on startup for local stabilization
 Base.metadata.create_all(bind=engine)
 
+# Seed the demo account on a fresh database (no-op if any user exists)
+from app.db.seed import seed_demo_user
+from app.db.database import SessionLocal
+with SessionLocal() as _db:
+    seed_demo_user(_db)
+
 # Setup Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(

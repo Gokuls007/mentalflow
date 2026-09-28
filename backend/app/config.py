@@ -33,6 +33,12 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
+    # Demo mode: seed a demo account on first start and let unauthenticated
+    # requests to the patient endpoints act as that account. Disable in production.
+    DEMO_MODE: bool = True
+    DEMO_USER_EMAIL: str = "demo@mentalflow.local"
+    DEMO_USER_PASSWORD: Optional[str] = None  # random (logged once) if not set
+
     # AI & ML Configuration
     GROQ_API_KEY: Optional[str] = None
     RL_MODEL_PATH: str = "/models/rl_agent.pt"

@@ -28,6 +28,7 @@ npm run dev
 Settings are read from environment variables or `backend/.env` (never commit it):
 - `SECRET_KEY`, `ENCRYPTION_KEY`: must be set for any real deployment (the built-in defaults are for local development only; the backend logs a warning when they are used).
 - `DATABASE_URL`: defaults to a local SQLite file `backend/mentalflow.db`, created on first start.
+- `DEMO_MODE` (default `true`): on a fresh database, creates the demo account `demo@mentalflow.local` (`DEMO_USER_EMAIL`), and requests sent without a login token use that account. Its password comes from `DEMO_USER_PASSWORD`; if that isn't set, a random password is generated and printed to the log once. Set `DEMO_MODE=false` in production.
 - `GROQ_API_KEY`: optional. Without it the chatbot and activity generator run in offline fallback mode.
 
 ## Features

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { apiService } from '../../services/api';
+import { apiClient } from '../../services/api';
 
 interface ProgressData {
   depression: {
@@ -32,7 +32,7 @@ export const ClinicalOutcomes: React.FC = () => {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const response = await apiService.instance_.get('/clinical/progress/me');
+        const response = await apiClient.get('/clinical/progress/me');
         setProgress(response.data);
       } catch (err) {
         console.error('Error fetching clinical progress:', err);

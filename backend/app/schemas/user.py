@@ -32,6 +32,10 @@ class UserProfile(UserResponse):
     baseline_gad7: Optional[int] = None
     rl_model_trained: bool
     last_login: Optional[datetime] = None
+    role: Optional[str] = None
+    latest_phq9_score: Optional[int] = None
+    latest_gad7_score: Optional[int] = None
+    clinical_severity: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr

@@ -18,12 +18,40 @@ import { ChatWindow } from '../chat/ChatWindow';
 import { ClinicalOutcomes } from './ClinicalOutcomes';
 import { MoodField } from './MoodField';
 import PeerSupport from './PeerSupport';
-import { apiClient } from '../../services/api';
+import { apiClient, apiService, getActiveUserId } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
   const { user, stats } = useUserStore();
-  const { activities, setActivities, setGanLoading } = useGameStore();
+  const { activities, setActivities, ganLoading, setGanLoading } = useGameStore();
   const [insight, setInsight] = useState<string>('');
+  const navigate = useNavigate();
+
+  const loadActivities = async () => {
+    try {
+      const res = await apiClient.get('/activities/');
+      setActivities(res.data);
+    } catch (e) {
+      console.warn('[Dashboard] Could not load activities', e);
+      setActivities([]);
+    }
+  };
+
+  const regenerateProtocol = async () => {
+    setGanLoading(true);
+    try {
+      await apiService.generateActivity(getActiveUserId());
+      await loadActivities();
+    } catch (e) {
+      console.warn('[Dashboard] Activity generation failed', e);
+    } finally {
+      setGanLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadActivities();
+  }, []);
 
   useEffect(() => {
     const fetchInsight = async () => {
@@ -189,7 +217,8 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm text-slate-500 font-medium italic">Dynamically generated via Clinical GAN v4.1</p>
               </div>
               <button 
-                onClick={() => setGanLoading(true)}
+                onClick={regenerateProtocol}
+                disabled={ganLoading}
                 className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-indigo-500 text-white font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition shadow-lg shadow-indigo-500/20"
               >
                 Regenerate Protocol
@@ -199,7 +228,7 @@ const Dashboard: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <AnimatePresence mode="popLayout">
-                {activities.map((act, idx) => (
+                {(activities || []).map((act, idx) => (
                   <motion.div
                     key={act.id || idx}
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -232,7 +261,10 @@ const Dashboard: React.FC = () => {
                         <Heart className="w-4 h-4 text-pink-500" />
                         <span className="text-xs font-bold text-slate-300">BA Recovery +{act.difficulty * 2}</span>
                       </div>
-                      <button className="text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">
+                      <button
+                        onClick={() => navigate(`/game/${act.id}`)}
+                        className="text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition"
+                      >
                         Execute →
                       </button>
                     </div>

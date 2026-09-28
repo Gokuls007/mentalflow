@@ -3,7 +3,6 @@ from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from app.models.clinical import Assessment
 from app.models.user import User
-from app.schemas.assessment import PHQ9Create, GAD7Create
 
 class AssessmentService:
     """Business logic for Clinical Assessments (PHQ-9, GAD-7)."""
@@ -41,39 +40,54 @@ class AssessmentService:
             
         return 0
 
+    ITEM_COUNTS = {"phq9": 9, "gad7": 7}
+
     def create_assessment(
         self, 
         db: Session, 
         user_id: int, 
         assessment_type: str, 
-        assessment_in: Any
+        responses: List[int],
+        assessment_date: Optional[date] = None
     ) -> Dict[str, Any]:
-        score = sum(assessment_in.responses)
+        """
+        Score and store a standard PHQ-9 / GAD-7. One record per user, type and day:
+        re-submitting on the same day updates that day's record.
+        """
+        score = sum(responses)
         severity = self._calculate_severity(assessment_type, score)
+        assessment_date = assessment_date or datetime.utcnow().date()
         
-        db_assessment = Assessment(
-            user_id=user_id,
-            type=assessment_type,
-            score=score,
-            responses=assessment_in.responses,
-            severity=severity,
-            date=assessment_in.date
-        )
-        db.add(db_assessment)
+        db_assessment = db.query(Assessment).filter_by(
+            user_id=user_id, type=assessment_type, date=assessment_date
+        ).first()
+        if db_assessment is None:
+            db_assessment = Assessment(user_id=user_id, type=assessment_type, date=assessment_date)
+            db.add(db_assessment)
+        db_assessment.score = score
+        db_assessment.responses = list(responses)
+        db_assessment.severity = severity
         
-        # Update user's cached clinical scores
+        # Update user's cached clinical scores. The first result (including a same-day
+        # correction of it) becomes the baseline.
+        db.flush()
+        is_first = db.query(Assessment).filter_by(user_id=user_id, type=assessment_type).count() == 1
         user = db.query(User).filter_by(id=user_id).first()
         if user:
             if assessment_type == "phq9":
                 user.latest_phq9_score = score
                 user.clinical_severity = severity
+                if user.baseline_phq9 is None or is_first:
+                    user.baseline_phq9 = score
             elif assessment_type == "gad7":
                 user.latest_gad7_score = score
+                if user.baseline_gad7 is None or is_first:
+                    user.baseline_gad7 = score
         
         # Safety Check
         crisis_level = 0
         if assessment_type == "phq9":
-            crisis_level = self.detect_crisis_level(assessment_in.responses)
+            crisis_level = self.detect_crisis_level(responses)
             
         db.commit()
         db.refresh(db_assessment)
