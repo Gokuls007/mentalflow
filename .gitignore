@@ -1,8 +1,19 @@
-# Backend
+# Python
+.venv/
+venv/
 backend/venv/
 backend/.env
-backend/__pycache__/
-backend/*.pyc
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Runtime databases
+*.db
+*.sqlite3
+*.db-journal
+
+# Backend
 backend/models/
 backend/logs/
 

@@ -20,7 +20,8 @@ class MoodService:
     def get_moods_by_date(self, db: Session, user_id: int, target_date: date) -> List[MoodLog]:
         return db.query(MoodLog).filter(
             MoodLog.user_id == user_id,
-            func.date(MoodLog.timestamp) == target_date
+            MoodLog.timestamp >= datetime.combine(target_date, datetime.min.time()),
+            MoodLog.timestamp < datetime.combine(target_date + timedelta(days=1), datetime.min.time())
         ).all()
         
     def get_mood_history(self, db: Session, user_id: int, days: int = 7, limit: int = 100) -> List[MoodLog]:

@@ -26,7 +26,7 @@ class Therapist(Base):
     
     created_at = Column(DateTime, server_default=func.now())
     
-    user = relationship("User", back_populates="therapist_profile")
+    user = relationship("User", back_populates="therapist_profile", foreign_keys=[user_id])
     patients = relationship("User", back_populates="assigned_therapist", foreign_keys="User.therapist_id")
 
 class ClinicalPrescription(Base):

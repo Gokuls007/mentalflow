@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import date
+from datetime import datetime
 from app.schemas.activity import MoodLogCreate, MoodLogResponse, MoodTrendResponse
 from app.services.mood_service import MoodService
 from app.security.auth import get_current_user
@@ -23,7 +23,8 @@ async def get_today_moods(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return mood_service.get_moods_by_date(db, current_user.id, date.today())
+    # Timestamps are stored in UTC (server default CURRENT_TIMESTAMP)
+    return mood_service.get_moods_by_date(db, current_user.id, datetime.utcnow().date())
 
 @router.get("/history", response_model=List[MoodLogResponse])
 async def get_mood_history(

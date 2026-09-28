@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, Optional
 from datetime import datetime
 
@@ -19,6 +19,7 @@ class GameResultSubmit(BaseModel):
     score: int
     duration: int
     completed: bool
-    mood_before: int
-    mood_after: int
-    engagement_rating: int
+    mood_before: int = Field(..., ge=1, le=10)
+    mood_after: int = Field(..., ge=1, le=10)
+    engagement_rating: int = Field(..., ge=1, le=10)
+    difficulty_level: str = "medium"  # easy, medium, hard

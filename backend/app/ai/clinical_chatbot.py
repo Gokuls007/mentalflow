@@ -35,7 +35,7 @@ class ClinicalChatbot:
             if not api_key or api_key == "YOUR_GROQ_API_KEY":
                 logger.warning("GROQ_API_KEY not set. Using offline fallback mode.")
                 return None
-            return ChatGroq(temperature=0.3, model_name="llama3-70b-8192", groq_api_key=api_key)
+            return ChatGroq(temperature=0.3, model_name="llama-3.3-70b-versatile", groq_api_key=api_key)
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {e}")
             return None
@@ -68,8 +68,9 @@ class ClinicalChatbot:
             )
 
         # 4. Save to Database
-        user_msg = ChatMessage(user_id=user_id, role="user", content=message)
-        ai_msg = ChatMessage(user_id=user_id, role="assistant", content=response_text)
+        intent = "CRISIS" if is_crisis else "SUPPORT"
+        user_msg = ChatMessage(user_id=user_id, role="user", content=message, intent=intent)
+        ai_msg = ChatMessage(user_id=user_id, role="assistant", content=response_text, intent=intent)
         db.add(user_msg)
         db.add(ai_msg)
         db.commit()
@@ -77,7 +78,7 @@ class ClinicalChatbot:
         return {
             "content": response_text,
             "role": "assistant",
-            "intent": "CRISIS" if is_crisis else "SUPPORT",
+            "intent": intent,
             "timestamp": datetime.utcnow().isoformat()
         }
 
@@ -109,7 +110,7 @@ class ClinicalChatbot:
         return "I'm currently in offline mode but I'm here to listen. How are you feeling today?"
 
     def _log_crisis(self, db: Session, user_id: int, content: str):
-        alert = CrisisAlert(user_id=user_id, message_content=content, severity="HIGH")
+        alert = CrisisAlert(user_id=user_id, trigger_message=content, risk_level="HIGH")
         db.add(alert)
         db.commit()
         logger.warning(f"CRISIS ALERT for User {user_id}")

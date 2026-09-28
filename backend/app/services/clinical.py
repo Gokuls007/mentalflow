@@ -119,11 +119,12 @@ def _unlock_features_for_level(user: User):
         10: "therapist_connect"
     }
     
-    # Ensure user.unlocked_features is a list
-    if not isinstance(user.unlocked_features, list):
-        user.unlocked_features = []
+    # Build a new list: in-place mutation of a JSON column is not detected by SQLAlchemy
+    unlocked = list(user.unlocked_features) if isinstance(user.unlocked_features, list) else []
         
     for lvl, feature in level_locks.items():
-        if user.current_level >= lvl and feature not in user.unlocked_features:
-            user.unlocked_features.append(feature)
+        if user.current_level >= lvl and feature not in unlocked:
+            unlocked.append(feature)
             logger.info(f"User {user.id} unlocked {feature} at level {user.current_level}")
+
+    user.unlocked_features = unlocked

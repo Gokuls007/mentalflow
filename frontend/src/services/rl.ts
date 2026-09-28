@@ -24,8 +24,13 @@ export const rlService = {
    */
   getPrediction: async (userId: number = 1): Promise<RLPrediction> => {
     try {
+      // Backend returns { difficulty: 'EASY' | 'MEDIUM' | 'HARD', confidence, action_probabilities }
       const data = await apiService.getDifficultyPrediction(userId);
-      return data;
+      return {
+        recommended_difficulty: String(data.difficulty).toLowerCase() as RLPrediction['recommended_difficulty'],
+        confidence_scores: data.action_probabilities,
+        explanation: data.reasoning
+      };
     } catch (error) {
       console.error('RL Prediction failed, falling back to medium:', error);
       return {

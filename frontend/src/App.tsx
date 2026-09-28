@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Dashboard from './components/dashboard/Dashboard';
 import GameContainer from './components/game/GameContainer';
 import AssessmentWizard from './components/assessment/AssessmentWizard';
@@ -7,6 +7,13 @@ import TherapistDashboard from './components/professional/TherapistDashboard';
 import InformedConsent from './components/legal/InformedConsent';
 import CrisisOverlay from './components/safety/CrisisOverlay';
 import { useUserStore } from './store/user.store';
+
+// Pass the activity id from the URL (/game/:id) to the game, defaulting to 1 for the demo
+const GameRoute: React.FC = () => {
+  const { id } = useParams();
+  const activityId = Number(id) || 1;
+  return <GameContainer activityId={activityId} />;
+};
 
 const App: React.FC = () => {
   const { user, setUser, clinicalSafetyLevel, role } = useUserStore();
@@ -39,7 +46,7 @@ const App: React.FC = () => {
 
           {/* Core App */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/game/:id" element={<GameContainer activityId={1} />} />
+          <Route path="/game/:id" element={<GameRoute />} />
 
           {/* Professional Context */}
           <Route path="/professional" element={<TherapistDashboard />} />

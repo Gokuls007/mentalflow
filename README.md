@@ -10,16 +10,25 @@ Adaptive behavioral activation system with RL + GAN personalization.
 
 ## Quick Start
 ```bash
-# Backend
+# Backend (Python 3.10+)
 cd backend
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+# Tests
+pytest
 
 # Frontend
-cd frontend
+cd ../frontend
 npm install
 npm run dev
 ```
+
+## Configuration
+Settings are read from environment variables or `backend/.env` (never commit it):
+- `SECRET_KEY`, `ENCRYPTION_KEY`: must be set for any real deployment (the built-in defaults are for local development only; the backend logs a warning when they are used).
+- `DATABASE_URL`: defaults to a local SQLite file `backend/mentalflow.db`, created on first start.
+- `GROQ_API_KEY`: optional. Without it the chatbot and activity generator run in offline fallback mode.
 
 ## Features
 ✅ RL-based difficulty adaptation

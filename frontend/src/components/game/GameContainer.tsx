@@ -107,7 +107,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ activityId }) => {
         activity_id: activityId,
         difficulty_level: difficulty,
         score: gameResult?.score || 0,
-        completion_time: gameResult?.duration || 0,
+        duration: gameResult?.duration || 0,
         completed: gameResult?.completed || false,
         mood_before: moodBefore,
         mood_after: moodAfter,

@@ -7,6 +7,17 @@ from app.security.auth import get_current_user
 
 router = APIRouter()
 
+@router.get("/progress/me")
+async def get_my_recovery_progress(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Shortcut for current user to see their own recovery path.
+    """
+    tracker = ClinicalOutcomeTracker(db)
+    return tracker.get_recovery_progress(current_user.id)
+
 @router.get("/progress/{user_id}")
 async def get_recovery_progress(
     user_id: int, 
@@ -23,16 +34,6 @@ async def get_recovery_progress(
     tracker = ClinicalOutcomeTracker(db)
     return tracker.get_recovery_progress(user_id)
 
-@router.get("/progress/me")
-async def get_my_recovery_progress(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """
-    Shortcut for current user to see their own recovery path.
-    """
-    tracker = ClinicalOutcomeTracker(db)
-    return tracker.get_recovery_progress(current_user.id)
 from app.services.empathy_engine import empathy_engine
 
 @router.get("/insights/me")

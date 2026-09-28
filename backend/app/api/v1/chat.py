@@ -16,6 +16,15 @@ from app.security.auth import decode_token
 
 optional_security = HTTPBearer(auto_error=False)
 
+DEMO_USER_ID = 1
+
+
+def _check_history_access(user_id: int, current_user: Optional[User]):
+    """Only the owner may read or clear a chat history; anonymous callers only get the demo user."""
+    allowed_id = current_user.id if current_user else DEMO_USER_ID
+    if user_id != allowed_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
     db: Session = Depends(get_db)
@@ -40,7 +49,7 @@ async def send_message(
     Send a message to the Clinical AI chatbot.
     Works with or without authentication (demo mode uses user_id=1).
     """
-    user_id = current_user.id if current_user else 1
+    user_id = current_user.id if current_user else DEMO_USER_ID
     try:
         result = chatbot.chat(db=db, user_id=user_id, message=request.message)
         return ChatMessageResponse(**result)
@@ -57,8 +66,9 @@ async def get_history(
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     """
-    Get chat history for a user. No auth required in demo mode.
+    Get chat history for a user. No auth required in demo mode (demo user only).
     """
+    _check_history_access(user_id, current_user)
     messages = db.query(ChatMessage).filter(
         ChatMessage.user_id == user_id
     ).order_by(ChatMessage.created_at.asc()).all()
@@ -72,8 +82,9 @@ async def clear_history(
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     """
-    Clear chat history for a user. No auth required in demo mode.
+    Clear chat history for a user. No auth required in demo mode (demo user only).
     """
+    _check_history_access(user_id, current_user)
     db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete()
     db.commit()
     

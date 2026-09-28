@@ -78,7 +78,7 @@ class ActivitySynthesizer:
                 from langchain_groq import ChatGroq
                 self.client = ChatGroq(
                     groq_api_key=self.api_key,
-                    model_name="llama3-70b-8192",
+                    model_name="llama-3.3-70b-versatile",
                     temperature=0.7
                 )
             except Exception as e:

@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict, Any
+from typing import Dict, Optional
 
 class AdaptiveAssessmentIRT:
     """
@@ -58,26 +58,17 @@ class AdaptiveAssessmentIRT:
     @staticmethod
     def estimate_theta(responses: Dict[int, int]) -> float:
         """
-        Estimates the latent trait (theta) using Maximum Likelihood Estimation (MLE).
-        For simplicity in this MVP, we use a weighted average of difficulties.
-        In production, we would use Newton-Raphson to solve for theta.
+        Estimates the latent trait (theta) on the [-3, 3] scale used by map_theta_to_score.
+        For simplicity in this MVP, theta is derived from the mean item score of the
+        answered items, so a complete PHQ-9 maps back to its standard sum score.
+        In production, we would use Newton-Raphson MLE to solve for theta.
         """
         if not responses:
             return 0.0
-            
-        weights = []
-        difficulties = []
-        
-        for item_id, score in responses.items():
-            # Normalized score (0-3) -> (0.0 to 1.0)
-            weight = score / 3.0
-            param = AdaptiveAssessmentIRT.PHQ9_PARAMS[item_id]
-            
-            weights.append(weight)
-            difficulties.append(param["b"])
-            
-        # Weighted average of difficulty parameters
-        return np.average(difficulties, weights=weights) if sum(weights) > 0 else np.mean(difficulties)
+
+        # Mean item score (0-3) -> (0.0 to 1.0) -> theta in [-3, 3]
+        mean_score = float(np.mean([score for score in responses.values()]))
+        return (mean_score / 3.0) * 6.0 - 3.0
 
     @staticmethod
     def map_theta_to_score(theta: float) -> int:
@@ -86,4 +77,4 @@ class AdaptiveAssessmentIRT:
         Approximate mapping: theta range [-3, 3] -> score [0, 27]
         """
         normalized = (theta + 3.0) / 6.0
-        return int(max(0, min(27, normalized * 27)))
+        return int(max(0, min(27, round(normalized * 27))))

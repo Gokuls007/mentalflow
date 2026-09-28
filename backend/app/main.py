@@ -6,7 +6,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.api import api_router
-from app.config import settings
+from app.config import settings, DEFAULT_SECRET_KEY, DEFAULT_ENCRYPTION_KEY
 from app.db.base import Base # Import consolidated models
 from app.db.database import engine
 import logging
@@ -14,6 +14,10 @@ import logging
 # Setup Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+if settings.SECRET_KEY == DEFAULT_SECRET_KEY or settings.ENCRYPTION_KEY == DEFAULT_ENCRYPTION_KEY:
+    logger.warning("SECRET_KEY / ENCRYPTION_KEY are using the built-in development defaults. "
+                   "Set them in backend/.env before deploying.")
 
 # Create tables on startup for local stabilization
 Base.metadata.create_all(bind=engine)
@@ -53,10 +57,10 @@ async def startup_event():
         from app.jobs.clinical_jobs import schedule_clinical_jobs
         schedule_clinical_jobs()
         logger.info("🎮 Real game mechanics activated!")
-    except Exception as e:
-        logger.error(f"Failed to start clinical scheduler: {e}")
     except ImportError:
         pass # Handle gracefully if ML deps not fully loaded
+    except Exception as e:
+        logger.error(f"Failed to start clinical scheduler: {e}")
 
 @app.get("/health")
 async def health_check():

@@ -108,16 +108,23 @@ async def submit_game_results(
     Submit results of a game session and update RL + Game Mechanics
     """
     
+    activity = db.query(Activity).filter_by(id=result.activity_id).first()
+
     # 1. Save GameSession record
     game_session = db.query(GameSession).filter_by(activity_id=result.activity_id, completed=False).order_by(GameSession.created_at.desc()).first()
     
     if not game_session:
-        # Create new if not found
+        # Create new if not found (demo mode: fall back to user 1 when the activity is unknown)
         game_session = GameSession(
-            user_id=1, # In real app, get from current_user
-            activity_id=result.activity_id
+            user_id=activity.user_id if activity else 1,
+            activity_id=result.activity_id if activity else None,
+            difficulty_level=result.difficulty_level
         )
         db.add(game_session)
+
+    user = db.query(User).filter_by(id=game_session.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
     game_session.score = result.score
     game_session.completion_time = result.duration
@@ -127,7 +134,6 @@ async def submit_game_results(
     game_session.engagement_rating = result.engagement_rating
     
     # 2. Mark Activity as completed
-    activity = db.query(Activity).filter_by(id=result.activity_id).first()
     if activity:
         activity.completed_at = datetime.utcnow()
         activity.completion_count += 1

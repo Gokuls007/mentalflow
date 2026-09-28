@@ -55,7 +55,7 @@ export function useChat(userId: number) {
       const newAssistantMsg: ChatMessage = {
         id: tempId + 1, // temporary ID until next refresh
         role: 'assistant',
-        content: response.data.response,
+        content: response.data.content,
         intent: response.data.intent,
         created_at: new Date().toISOString(),
       };

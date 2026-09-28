@@ -27,7 +27,7 @@ class User(Base):
     total_xp = Column(Integer, default=0, nullable=False)
     current_level = Column(Integer, default=1, nullable=False)
     current_streak = Column(Integer, default=0, nullable=False)
-    unlocked_features = Column(JSON, default=[]) # Features like 'mood_chart', 'clinical_ai'
+    unlocked_features = Column(JSON, default=lambda: []) # Features like 'mood_chart', 'clinical_ai'
     
     # Live Clinical Scores (Updated by AI)
     latest_phq9_score = Column(Integer)
@@ -56,9 +56,7 @@ class User(Base):
     audit_logs = relationship("AuditLog", back_populates="user")
     chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
     crisis_alerts = relationship("CrisisAlert", back_populates="user", cascade="all, delete-orphan")
-    
-    # Professional-Patient mapping
-    assigned_professional = relationship("User", remote_side=[id], backref="clients")
+    # Professional-Patient mapping is via therapist_id -> Therapist.patients (see assigned_therapist)
     
     __table_args__ = (
         CheckConstraint("age >= 18 AND age <= 120", name="check_age_range"),

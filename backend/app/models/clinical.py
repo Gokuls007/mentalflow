@@ -32,6 +32,8 @@ class Activity(Base):
     
     # Behavioral Activation (BA) Extensions
     source = Column(String(50), default="static", index=True) # static, rl, gan, ba_prescription
+    gan_embedding = Column(JSONB) # Latent features from the activity generator
+    personalization_score = Column(Float) # Generator confidence (0-1), used as engagement signal
     is_micro_habit = Column(Boolean, default=False)
     ba_week = Column(Integer)
     clinical_explanation = Column(Text)
