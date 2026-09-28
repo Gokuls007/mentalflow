@@ -18,14 +18,21 @@ import { ChatWindow } from '../chat/ChatWindow';
 import { ClinicalOutcomes } from './ClinicalOutcomes';
 import { MoodField } from './MoodField';
 import PeerSupport from './PeerSupport';
-import { apiClient, apiService, getActiveUserId } from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { apiClient, apiService, getActiveUserId, isLoggedIn, DEMO_PROFILE } from '../../services/api';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
-  const { user, stats } = useUserStore();
+  const { user, stats, setUser, demoMode } = useUserStore();
+  const signedIn = isLoggedIn() && !(user as any)?.isDemo;
   const { activities, setActivities, ganLoading, setGanLoading } = useGameStore();
   const [insight, setInsight] = useState<string>('');
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    apiService.logout();
+    if (demoMode) setUser(DEMO_PROFILE as any);
+    navigate('/login');
+  };
 
   const loadActivities = async () => {
     try {
@@ -94,9 +101,29 @@ const Dashboard: React.FC = () => {
                 <p className="text-xs font-black text-indigo-300">{user?.latest_phq9_score || '--'}</p>
               </div>
               <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-black text-xs text-white">
-                {user?.firstName?.[0] || 'A'}
+                {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'A'}
               </div>
             </div>
+            {signedIn ? (
+              <div className="flex items-center gap-4">
+                <div className="hidden lg:block text-right">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Signed in</p>
+                  <p className="text-xs font-bold text-slate-300">{user?.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="whitespace-nowrap text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-400 transition"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 whitespace-nowrap text-[11px] font-black uppercase tracking-widest">
+                <span className="hidden lg:inline text-slate-600">Demo mode</span>
+                <Link to="/login" className="text-slate-400 hover:text-indigo-400 transition">Sign in</Link>
+                <Link to="/register" className="px-4 py-2 rounded-xl bg-indigo-500 text-white hover:bg-indigo-600 transition">Register</Link>
+              </div>
+            )}
           </div>
         </div>
       </nav>

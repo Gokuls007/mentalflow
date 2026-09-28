@@ -33,12 +33,14 @@ export interface UserStore {
   stats: UserStats | null;
   isLoading: boolean;
   error: string | null;
+  demoMode: boolean;
   
   setUser: (user: UserProfile) => void;
   setStats: (stats: UserStats) => void;
   setSafetyLevel: (level: number) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setDemoMode: (demoMode: boolean) => void;
   clear: () => void;
 }
 
@@ -52,12 +54,14 @@ export const useUserStore = create<UserStore>()(
         stats: null,
         isLoading: false,
         error: null,
+        demoMode: true,
 
         setUser: (user) => set({ user, role: (user as any).role || 'patient' }),
         setStats: (stats) => set({ stats }),
         setSafetyLevel: (level) => set({ clinicalSafetyLevel: level }),
         setLoading: (loading) => set({ isLoading: loading }),
         setError: (error) => set({ error }),
+        setDemoMode: (demoMode) => set({ demoMode }),
         clear: () => set({ user: null, stats: null, error: null, clinicalSafetyLevel: 0 }),
       }),
       {

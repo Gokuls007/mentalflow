@@ -52,6 +52,46 @@ export const DEMO_USER_ID = 1;
 // Id of the logged-in user, or the demo account when nobody is logged in
 export const getActiveUserId = (): number => useUserStore.getState().user?.id || DEMO_USER_ID;
 
+// Must match PASSWORD_MIN_LENGTH in backend/app/schemas/user.py
+export const PASSWORD_MIN_LENGTH = 8;
+
+export const DEMO_PROFILE = {
+  id: DEMO_USER_ID,
+  email: 'demo@mentalflow.local',
+  firstName: 'Demo',
+  lastName: 'User',
+  role: 'patient',
+  isDemo: true
+};
+
+export const isLoggedIn = (): boolean => !!localStorage.getItem('authToken');
+
+// Map the backend /users/me payload to the store's user shape
+export const toStoreUser = (me: any) => ({
+  ...me,
+  firstName: me.first_name,
+  lastName: me.last_name,
+  isDemo: false
+});
+
+// Human-readable message for a failed auth/API request
+export const describeApiError = (error: any, fallback = 'Something went wrong. Please try again.'): string => {
+  const status = error?.response?.status;
+  const detail = error?.response?.data?.detail;
+  if (!error?.response) return 'Cannot reach the server. Check that the backend is running.';
+  if (status === 422 && Array.isArray(detail)) {
+    return detail.map((d: any) => {
+      const field = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : '';
+      const msg = String(d.msg || '').replace(/^Value error, /, '');
+      return field && field !== 'body' ? `${field}: ${msg}` : msg;
+    }).join(' ');
+  }
+  if (status === 401) return typeof detail === 'string' && detail !== 'Invalid credentials' ? detail : 'Incorrect email or password.';
+  if (status === 409) return 'An account with this email already exists. Try signing in instead.';
+  if (typeof detail === 'string') return detail;
+  return fallback;
+};
+
 export const apiService = {
   // Auth
   login: async (credentials: any) => {
@@ -59,6 +99,20 @@ export const apiService = {
     if (response.data.access_token) {
       localStorage.setItem('authToken', response.data.access_token);
     }
+    return response.data;
+  },
+
+  register: async (data: { email: string; password: string; first_name?: string; last_name?: string }) => {
+    const response = await apiClient.post('/users/register', data);
+    return response.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem('authToken');
+  },
+
+  getAuthConfig: async (): Promise<{ demo_mode: boolean; password_min_length: number }> => {
+    const response = await apiClient.get('/users/auth-config');
     return response.data;
   },
 

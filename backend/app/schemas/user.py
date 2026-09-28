@@ -2,6 +2,8 @@ from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime
 
+PASSWORD_MIN_LENGTH = 8
+
 class UserBase(BaseModel):
     email: EmailStr
     first_name: Optional[str] = None
@@ -9,7 +11,7 @@ class UserBase(BaseModel):
     age: Optional[int] = Field(None, ge=18, le=120)
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=PASSWORD_MIN_LENGTH)
     anxiety_trigger: Optional[str] = "general"
 
 class UserUpdate(BaseModel):
@@ -43,7 +45,7 @@ class UserLogin(BaseModel):
 
 class PasswordChange(BaseModel):
     old_password: str
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=PASSWORD_MIN_LENGTH)
 
 class UserStatsResponse(BaseModel):
     total_activities: int

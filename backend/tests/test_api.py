@@ -85,3 +85,18 @@ def test_activities_and_moods(client, auth_headers):
     r = client.get("/api/v1/moods/today", headers=auth_headers)
     assert r.status_code == 200 and len(r.json()) == 1
     assert client.get("/api/v1/moods/trend", headers=auth_headers).status_code == 200
+
+
+def test_auth_config_is_public(client):
+    r = client.get("/api/v1/users/auth-config")
+    assert r.status_code == 200
+    assert r.json() == {"demo_mode": True, "password_min_length": 8}
+
+
+def test_register_validation_errors(client):
+    r = client.post("/api/v1/users/register", json={"email": "not-an-email", "password": "password123"})
+    assert r.status_code == 422
+    r = client.post("/api/v1/users/register", json={"email": "short.pw@example.com", "password": "short"})
+    assert r.status_code == 422
+    r = client.post("/api/v1/users/login", json={"email": "demo.patient@example.com", "password": "wrong-password"})
+    assert r.status_code == 401

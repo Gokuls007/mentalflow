@@ -8,6 +8,13 @@ from app.db.database import get_db
 router = APIRouter()
 user_service = UserService()
 
+@router.get("/auth-config")
+async def get_auth_config():
+    """Public: tells the frontend whether the no-login demo path is available."""
+    from app.config import settings
+    from app.schemas.user import PASSWORD_MIN_LENGTH
+    return {"demo_mode": settings.DEMO_MODE, "password_min_length": PASSWORD_MIN_LENGTH}
+
 @router.get("/demo/{user_id}/stats")
 async def get_demo_user_stats(user_id: int, db: Session = Depends(get_db)):
     """Public stats endpoint for demo mode (no auth required)."""
