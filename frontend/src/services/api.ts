@@ -1,10 +1,9 @@
 import axios, { AxiosInstance } from 'axios';
 import { useUserStore } from '../store/user.store';
 
-// In dev (Vite), use localhost:8000 directly. In production (Docker/nginx), use relative path.
-const API_URL = import.meta.env.DEV
-  ? 'http://localhost:8000/api/v1'
-  : '/api/v1';
+// Relative path everywhere: the Vite dev server proxies /api to BACKEND_URL (see vite.config.js),
+// and nginx does the same in Docker. VITE_API_URL overrides it if the API lives elsewhere.
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 class APIClient {
   private instance: AxiosInstance;
@@ -57,7 +56,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 
 export const DEMO_PROFILE = {
   id: DEMO_USER_ID,
-  email: 'demo@mentalflow.local',
+  email: 'demo@example.com',
   firstName: 'Demo',
   lastName: 'User',
   role: 'patient',

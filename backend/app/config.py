@@ -1,5 +1,6 @@
-from typing import List, Optional
-from pydantic_settings import BaseSettings
+import json
+from typing import Annotated, List, Optional
+from pydantic_settings import BaseSettings, NoDecode
 from pydantic import AnyHttpUrl, validator
 
 # Development-only defaults; override via environment / backend/.env in any real deployment
@@ -23,11 +24,14 @@ class Settings(BaseSettings):
     DATABASE_ECHO: bool = False
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # NoDecode: accept a plain comma-separated string (the validator splits it) as well as a JSON list
+    CORS_ORIGINS: Annotated[List[str], NoDecode] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @validator("CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str] | str:
-        if isinstance(v, str) and not v.startswith("["):
+        if isinstance(v, str) and v.strip().startswith("["):
+            return json.loads(v)
+        if isinstance(v, str):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, (list, str)):
             return v
@@ -36,7 +40,7 @@ class Settings(BaseSettings):
     # Demo mode: seed a demo account on first start and let unauthenticated
     # requests to the patient endpoints act as that account. Disable in production.
     DEMO_MODE: bool = True
-    DEMO_USER_EMAIL: str = "demo@mentalflow.local"
+    DEMO_USER_EMAIL: str = "demo@example.com"
     DEMO_USER_PASSWORD: Optional[str] = None  # random (logged once) if not set
 
     # AI & ML Configuration
